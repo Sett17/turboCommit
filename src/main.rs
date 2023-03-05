@@ -27,6 +27,15 @@ fn main() {
         }
     };
 
+    if !is_git_repo() {
+        println!(
+            "{} {}",
+            "Not a git repository.".red(),
+            "Please run this command in a git repository.".bright_black()
+        );
+        process::exit(1);
+    }
+
     println!();
     let full_diff = match git_diff() {
         Ok(diff) => diff,
@@ -35,6 +44,16 @@ fn main() {
             process::exit(1);
         }
     };
+
+    // check if diff is empty
+    if full_diff.trim().is_empty() {
+        println!(
+            "{} {}",
+            "No staged files.".red(),
+            "Please stage the files you want to commit.".bright_black()
+        );
+        process::exit(1);
+    }
 
     let diff = match check_diff(full_diff) {
         Ok(diff) => diff,
@@ -167,6 +186,15 @@ fn count_token(s: &str) -> Result<usize, Box<dyn Error>> {
     text += s;
     let tokens = bpe.encode_with_special_tokens(&text);
     Ok(tokens.len())
+}
+
+fn is_git_repo() -> bool {
+    let output = Command::new("git")
+        .arg("rev-parse")
+        .arg("--is-inside-work-tree")
+        .output()
+        .expect("Failed to execute git command");
+    output.status.success()
 }
 
 fn get_staged_files() -> Result<String, Box<dyn Error>> {
