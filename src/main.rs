@@ -1,12 +1,13 @@
 use std::cmp::Ordering;
-use std::{env, process};
+use std::error::Error;
 use std::process::Command;
+use std::{env, process};
 
 use colored::Colorize;
-use inquire::{MultiSelect};
+use inquire::MultiSelect;
 use tiktoken_rs::tiktoken::cl100k_base;
 
-use openai::{Message};
+use openai::Message;
 
 mod openai;
 
@@ -35,16 +36,25 @@ fn main() {
         }
     };
 
-    let diff = check_diff(full_diff);
+    let diff = match check_diff(full_diff) {
+        Ok(diff) => diff,
+        Err(e) => {
+            println!("{}", e);
+            process::exit(1);
+        }
+    };
 
-    let messages = vec![
-        Message::system(SYSTEM_MSG),
-        Message::user(diff),
-    ];
+    let messages = vec![Message::system(SYSTEM_MSG), Message::user(diff)];
 
     let req = openai::Request::new(MODEL, messages);
 
-    let json = serde_json::to_string(&req).unwrap();
+    let json = match serde_json::to_string(&req) {
+        Ok(json) => json,
+        Err(e) => {
+            println!("{}", e);
+            process::exit(1);
+        }
+    };
 
     let client = reqwest::blocking::Client::new();
     let res = client
@@ -55,25 +65,51 @@ fn main() {
         .send();
 
     match res {
-        Ok(res) => {
-            match res.status() {
-                reqwest::StatusCode::OK => {
-                    let body = res.text().unwrap();
-                    let resp = serde_json::from_str::<openai::Response>(&body).unwrap();
-                    println!("This used {} token, costing you ~{}$", format!("{}", resp.usage.total_tokens).green(), format!("{}", cost(resp.usage.total_tokens)).green());
-                    for choice in resp.choices {
-                        println!("===============================");
-                        println!("{}", choice.message.content);
-                        println!("===============================");
+        Ok(res) => match res.status() {
+            reqwest::StatusCode::OK => {
+                let body = match res.text() {
+                    Ok(body) => body,
+                    Err(e) => {
+                        println!("{}", e);
+                        process::exit(1);
                     }
-                }
-                _ => {
-                    let e = res.text().unwrap();
-                    let error = serde_json::from_str::<openai::ErrorRoot>(&e).unwrap().error;
-                    println!("{}", error);
+                };
+                let resp = match serde_json::from_str::<openai::Response>(&body) {
+                    Ok(resp) => resp,
+                    Err(e) => {
+                        println!("{}", e);
+                        process::exit(1);
+                    }
+                };
+                println!(
+                    "This used {} token, costing you ~{}$",
+                    format!("{}", resp.usage.total_tokens).green(),
+                    format!("{}", cost(resp.usage.total_tokens)).green()
+                );
+                for choice in resp.choices {
+                    println!("===============================");
+                    println!("{}", choice.message.content);
+                    println!("===============================");
                 }
             }
-        }
+            _ => {
+                let e = match res.text() {
+                    Ok(e) => e,
+                    Err(e) => {
+                        println!("{}", e);
+                        process::exit(1);
+                    }
+                };
+                let error = match serde_json::from_str::<openai::ErrorRoot>(&e) {
+                    Ok(error) => error.error,
+                    Err(e) => {
+                        println!("{}", e);
+                        process::exit(1);
+                    }
+                };
+                println!("{}", error);
+            }
+        },
         Err(e) => {
             println!("{}", e);
             process::exit(1);
@@ -81,81 +117,88 @@ fn main() {
     }
 }
 
-fn check_diff<S: Into<String>>(s: S) -> String {
+fn check_diff<S: Into<String>>(s: S) -> Result<String, Box<dyn Error>> {
     let diff = s.into();
-    let tokens_length = count_token(&diff);
+    let tokens_length = count_token(&diff)?;
     match tokens_length.cmp(&4096_usize) {
         Ordering::Greater => {
-            println!("{} {}", "The diff is too long!".red(), format!("The diff is ~{} tokens long, while the maximum is 4096.", tokens_length).bright_black());
+            println!(
+                "{} {}",
+                "The diff is too long!".red(),
+                format!(
+                    "The diff is ~{} tokens long, while the maximum is 4096.",
+                    tokens_length
+                )
+                .bright_black()
+            );
             let list_str = match get_staged_files() {
-                Ok(list) => {
-                    list
-                }
+                Ok(list) => list,
                 Err(e) => {
                     panic!("{}", e);
                 }
             };
-            let list = list_str.split('\n').filter(|s| !s.is_empty()).collect::<Vec<&str>>();
+            let list = list_str
+                .split('\n')
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<&str>>();
             let ans = MultiSelect::new("Select the files you want to include the diff from:", list)
                 .prompt();
-            
+
             match ans {
-                Ok(ans) => {
-                    match git_diff_from_files(ans) {
-                        Ok(diff) => {
-                            check_diff(diff)
-                        }
-                        Err(e) => {
-                            panic!("{}", e);
-                        }
+                Ok(ans) => match git_diff_from_files(ans) {
+                    Ok(diff) => check_diff(diff),
+                    Err(e) => {
+                        panic!("{}", e);
                     }
-                }
+                },
                 Err(e) => {
                     panic!("{}", e);
                 }
             }
         }
-        _ => diff
+        _ => Ok(diff),
     }
 }
 
-fn count_token(s: &str) -> usize {
-    let bpe = cl100k_base().unwrap();
+fn count_token(s: &str) -> Result<usize, Box<dyn Error>> {
+    let bpe = cl100k_base()?;
     let mut text = SYSTEM_MSG.to_string();
     text += "\n";
     text += s;
     let tokens = bpe.encode_with_special_tokens(&text);
-    tokens.len()
+    Ok(tokens.len())
 }
 
-fn get_staged_files() -> Result<String, String> {
+fn get_staged_files() -> Result<String, Box<dyn Error>> {
     let diff = Command::new("git")
         .arg("diff")
         .arg("--staged")
         .arg("--name-only")
-        .output()
-        .expect("failed to execute git diff");
+        .output()?;
     match diff.status.success() {
-        true => Ok(String::from_utf8_lossy(&diff.stdout).to_string().replace("\r\n", "\n")),
-        false => Err(String::from_utf8_lossy(&diff.stderr).to_string()),
+        true => Ok(String::from_utf8_lossy(&diff.stdout)
+            .to_string()
+            .replace("\r\n", "\n")),
+        false => Err(Box::try_from(String::from_utf8_lossy(&diff.stderr).to_string()).unwrap()),
     }
 }
 
-fn git_diff() -> Result<String, String> {
+fn git_diff() -> Result<String, Box<dyn Error>> {
     let diff = Command::new("git")
         .arg("diff")
         .arg("--staged")
         .arg("--minimal")
         .arg("-U2")
-        .output()
-        .expect("failed to execute git diff");
+        .output()?;
     match diff.status.success() {
-        true => Ok(String::from_utf8_lossy(&diff.stdout).to_string().replace("\r\n", "\n")),
-        false => Err(String::from_utf8_lossy(&diff.stderr).to_string()),
+        true => Ok(String::from_utf8_lossy(&diff.stdout)
+            .to_string()
+            .replace("\r\n", "\n")),
+        false => Err(Box::try_from(String::from_utf8_lossy(&diff.stderr).to_string()).unwrap()),
     }
 }
 
-fn git_diff_from_files(v: Vec<&str>) -> Result<String, String> {
+fn git_diff_from_files(v: Vec<&str>) -> Result<String, Box<dyn Error>> {
     let mut binding = Command::new("git");
     let cmd = binding
         .arg("diff")
@@ -166,12 +209,12 @@ fn git_diff_from_files(v: Vec<&str>) -> Result<String, String> {
     for file in v {
         cmd.arg(file);
     }
-    let diff = cmd
-        .output()
-        .expect("failed to execute git diff");
+    let diff = cmd.output()?;
     match diff.status.success() {
-        true => Ok(String::from_utf8_lossy(&diff.stdout).to_string().replace("\r\n", "\n")),
-        false => Err(String::from_utf8_lossy(&diff.stderr).to_string()),
+        true => Ok(String::from_utf8_lossy(&diff.stdout)
+            .to_string()
+            .replace("\r\n", "\n")),
+        false => Err(Box::try_from(String::from_utf8_lossy(&diff.stderr).to_string()).unwrap()),
     }
 }
 
@@ -187,7 +230,12 @@ mod tests {
 
     #[test]
     fn test_simple_count_token() {
-        let result = count_token("tiktoken is great!");
+        let result = match count_token("tiktoken is great!") {
+            Ok(result) => result,
+            Err(e) => {
+                panic!("{}", e);
+            }
+        };
         assert_eq!(result, 83);
     }
 }
