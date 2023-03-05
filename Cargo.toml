@@ -2,6 +2,12 @@
 name = "turbocommit"
 version = "0.1.0"
 edition = "2021"
+authors = ["Sett"]
+description = "A CLI tool to create commit messages with gpt-3.5-turbo"
+readme = "README.md"
+keywords = ["gpt-3.5-turbo", "commit", "commit message", "cli", "command line"]
+repository = "https://github.com/Sett17/turboCommit"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,7 +15,7 @@ edition = "2021"
 colored = "2.0.0"
 inquire = "0.6.0"
 reqwest = { version = "0.11.14", features = ["blocking"] }
-serde = { version = "1.0.152", features = ["derive"]}
+serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
 tiktoken-rs = "0.1.4"
 tokenizers = "0.13.2"
