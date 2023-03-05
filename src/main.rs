@@ -1,11 +1,10 @@
 use std::cmp::Ordering;
-use std::env;
+use std::{env, process};
 use std::process::Command;
 
 use colored::Colorize;
-use inquire::{Confirm, MultiSelect};
+use inquire::{MultiSelect};
 use tiktoken_rs::tiktoken::cl100k_base;
-use tokenizers::{InputSequence, Tokenizer};
 
 use openai::{Message};
 
@@ -23,7 +22,7 @@ fn main() {
         Ok(api_key) => api_key,
         Err(_) => {
             println!("{} {}", "OPENAI_API_KEY not set.".red(), "Refer to step 3 here: https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety".bright_black());
-            return;
+            process::exit(1);
         }
     };
 
@@ -32,15 +31,16 @@ fn main() {
         Ok(diff) => diff,
         Err(e) => {
             println!("{}", e);
-            return;
+            process::exit(1);
         }
     };
 
     let diff = check_diff(full_diff);
 
-    let mut messages = Vec::new();
-    messages.push(Message::system(SYSTEM_MSG));
-    messages.push(Message::user(diff));
+    let messages = vec![
+        Message::system(SYSTEM_MSG),
+        Message::user(diff),
+    ];
 
     let req = openai::Request::new(MODEL, messages);
 
@@ -71,21 +71,20 @@ fn main() {
                     let e = res.text().unwrap();
                     let error = serde_json::from_str::<openai::ErrorRoot>(&e).unwrap().error;
                     println!("{}", error);
-                    return;
                 }
             }
         }
         Err(e) => {
             println!("{}", e);
-            return;
+            process::exit(1);
         }
     }
 }
 
 fn check_diff<S: Into<String>>(s: S) -> String {
     let diff = s.into();
-    let tokens_length = count_token(&*diff);
-    match tokens_length.cmp(&(4096 as usize)) {
+    let tokens_length = count_token(&diff);
+    match tokens_length.cmp(&4096_usize) {
         Ordering::Greater => {
             println!("{} {}", "The diff is too long!".red(), format!("The diff is ~{} tokens long, while the maximum is 4096.", tokens_length).bright_black());
             let list_str = match get_staged_files() {
@@ -96,10 +95,11 @@ fn check_diff<S: Into<String>>(s: S) -> String {
                     panic!("{}", e);
                 }
             };
-            let list = list_str.split("\n").filter(|s| !s.is_empty()).collect::<Vec<&str>>();
+            let list = list_str.split('\n').filter(|s| !s.is_empty()).collect::<Vec<&str>>();
             let ans = MultiSelect::new("Select the files you want to include the diff from:", list)
                 .prompt();
-            let new_diff = match ans {
+            
+            match ans {
                 Ok(ans) => {
                     match git_diff_from_files(ans) {
                         Ok(diff) => {
@@ -113,8 +113,7 @@ fn check_diff<S: Into<String>>(s: S) -> String {
                 Err(e) => {
                     panic!("{}", e);
                 }
-            };
-            new_diff
+            }
         }
         _ => diff
     }
@@ -125,7 +124,7 @@ fn count_token(s: &str) -> usize {
     let mut text = SYSTEM_MSG.to_string();
     text += "\n";
     text += s;
-    let tokens = bpe.encode_with_special_tokens(&*text);
+    let tokens = bpe.encode_with_special_tokens(&text);
     tokens.len()
 }
 

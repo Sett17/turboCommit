@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::fmt;
 use colored::Colorize;
 use serde::{Serialize, Deserialize};
