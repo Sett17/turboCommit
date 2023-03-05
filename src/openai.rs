@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use std::fmt;
 use colored::Colorize;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -57,7 +57,13 @@ pub struct Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} ({:?}): {:?}", self.type_field.red(), self.code, self.message)
+        write!(
+            f,
+            "{} ({:?}): {:?}",
+            self.type_field.red(),
+            self.code,
+            self.message
+        )
     }
 }
 
