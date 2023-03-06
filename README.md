@@ -1,6 +1,6 @@
 # turbocommit
 
-turbocommit is a CLI tool written in Rust that generates commit messages in accordance with the Conventional Commits specification. It uses the git diff to create commit messages that accurately reflect the changes made to a repository.
+turbocommit is a CLI tool written in Rust that generates commit messages in accordance with the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification. It uses the git diff to create commit messages that accurately reflect the changes made to a repository.
 
 ## Installation
 
