@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
+use crate::SYSTEM_MSG;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{error, fmt};
+use tiktoken_rs::tiktoken::cl100k_base;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -71,13 +73,15 @@ impl fmt::Display for Error {
 pub struct Request {
     pub model: String,
     pub messages: Vec<Message>,
+    pub n: i32,
 }
 
 impl Request {
-    pub fn new<S: Into<String>>(model: S, messages: Vec<Message>) -> Request {
+    pub fn new<S: Into<String>>(model: S, messages: Vec<Message>, n: i32) -> Request {
         Request {
             model: model.into(),
             messages,
+            n,
         }
     }
 }
@@ -105,3 +109,19 @@ pub struct Usage {
     pub completion_tokens: i64,
     pub total_tokens: i64,
 }
+
+pub fn count_token(s: &str, extra: &str) -> Result<usize, Box<dyn error::Error>> {
+    let bpe = cl100k_base()?;
+    let mut text = SYSTEM_MSG.to_string();
+    text += "\n";
+    text += extra;
+    text += s;
+    let tokens = bpe.encode_with_special_tokens(&text);
+    Ok(tokens.len())
+}
+
+pub fn cost(token: i64) -> f64 {
+    token as f64 * (PRICE / 1000.0)
+}
+
+const PRICE: f64 = 0.002;
