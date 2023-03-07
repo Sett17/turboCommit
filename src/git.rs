@@ -1,11 +1,11 @@
 use crate::openai;
+use anyhow::anyhow;
 use colored::Colorize;
 use inquire::MultiSelect;
 use std::cmp::Ordering;
-use std::error::Error;
 use std::process::Command;
 
-pub fn check_diff<S: Into<String>>(s: S, extra: &String) -> Result<String, Box<dyn Error>> {
+pub fn check_diff<S: Into<String>>(s: S, extra: &String) -> anyhow::Result<String> {
     let diff = s.into();
     let tokens_length = openai::count_token(&diff, extra)?;
     match tokens_length.cmp(&4096_usize) {
@@ -57,7 +57,7 @@ pub fn is_repo() -> bool {
     output.status.success()
 }
 
-fn staged_files() -> Result<String, Box<dyn Error>> {
+fn staged_files() -> anyhow::Result<String> {
     let diff = Command::new("git")
         .arg("diff")
         .arg("--staged")
@@ -67,11 +67,11 @@ fn staged_files() -> Result<String, Box<dyn Error>> {
         true => Ok(String::from_utf8_lossy(&diff.stdout)
             .to_string()
             .replace("\r\n", "\n")),
-        false => Err(Box::try_from(String::from_utf8_lossy(&diff.stderr).to_string()).unwrap()),
+        false => Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string())),
     }
 }
 
-pub fn diff() -> Result<String, Box<dyn Error>> {
+pub fn diff() -> anyhow::Result<String> {
     let diff = Command::new("git")
         .arg("diff")
         .arg("--staged")
@@ -82,11 +82,11 @@ pub fn diff() -> Result<String, Box<dyn Error>> {
         true => Ok(String::from_utf8_lossy(&diff.stdout)
             .to_string()
             .replace("\r\n", "\n")),
-        false => Err(Box::try_from(String::from_utf8_lossy(&diff.stderr).to_string()).unwrap()),
+        false => Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string())),
     }
 }
 
-fn diff_from_files(v: Vec<&str>) -> Result<String, Box<dyn Error>> {
+fn diff_from_files(v: Vec<&str>) -> anyhow::Result<String> {
     let mut binding = Command::new("git");
     let cmd = binding
         .arg("diff")
@@ -102,6 +102,6 @@ fn diff_from_files(v: Vec<&str>) -> Result<String, Box<dyn Error>> {
         true => Ok(String::from_utf8_lossy(&diff.stdout)
             .to_string()
             .replace("\r\n", "\n")),
-        false => Err(Box::try_from(String::from_utf8_lossy(&diff.stderr).to_string()).unwrap()),
+        false => Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string())),
     }
 }

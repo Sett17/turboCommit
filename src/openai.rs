@@ -3,7 +3,7 @@
 use crate::SYSTEM_MSG;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
-use std::{error, fmt};
+use std::fmt;
 use tiktoken_rs::tiktoken::cl100k_base;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -110,7 +110,7 @@ pub struct Usage {
     pub total_tokens: i64,
 }
 
-pub fn count_token(s: &str, extra: &str) -> Result<usize, Box<dyn error::Error>> {
+pub fn count_token(s: &str, extra: &str) -> anyhow::Result<usize> {
     let bpe = cl100k_base()?;
     let mut text = SYSTEM_MSG.to_string();
     text += "\n";

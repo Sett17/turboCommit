@@ -44,7 +44,6 @@ fn main() {
         }
     };
 
-    // check if diff is empty
     if full_diff.trim().is_empty() {
         println!(
             "{} {}",
@@ -96,11 +95,10 @@ fn main() {
                         process::exit(1);
                     }
                 };
-                // println!("{:?}", body);
                 let resp = match serde_json::from_str::<openai::Response>(&body) {
                     Ok(resp) => resp,
                     Err(e) => {
-                        println!("error parsing response: {}", e);
+                        println!("error parsing response: {}\n {:?}", e, body);
                         process::exit(1);
                     }
                 };

@@ -14,6 +14,7 @@ impl Options {
             msg: String::new(),
         };
         let mut iter = args.skip(1);
+        let mut msg = String::new();
         while let Some(arg) = iter.next() {
             match arg.as_str() {
                 "-n" => {
@@ -31,38 +32,37 @@ impl Options {
                         };
                     }
                 }
-                "-m" => {
-                    if let Some(m) = iter.next() {
-                        opts.msg = m;
-                    }
-                }
                 "-h" => help(),
                 "--help" => help(),
-                _ => {}
+                _ => {
+                    msg.push_str(&arg);
+                    msg.push(' ');
+                }
             }
         }
+        opts.msg = msg.trim().to_string();
         opts
     }
 }
 
 fn help() {
+    println!("{}", "    __             __".red());
+    println!("{}", "   / /___  _______/ /_  ____".red());
+    println!("{}", "  / __/ / / / ___/ __ \\/ __ \\".yellow());
+    println!("{}", " / /_/ /_/ / /  / /_/ / /_/ /".green());
     println!(
-        "
-   __             __                   
-  / /___  _______/ /_  ____            
- / __/ / / / ___/ __ \\/ __ \\           
-/ /_/ /_/ / /  / /_/ / /_/ /           
-\\__/\\__,_/_/  /_.___/\\____/       _ __ 
-  _________  ____ ___  ____ ___  (_) /_
- / ___/ __ \\/ __ `__ \\/ __ `__ \\/ / __/
-/ /__/ /_/ / / / / / / / / / / / / /_  
-\\___/\\____/_/ /_/ /_/_/ /_/ /_/_/\\__/  
-                                       
-"
+        "{}{}",
+        " \\__/\\__,_/_/  /_.___/\\____/       ".blue(),
+        "_ __".purple()
     );
-    println!("Usage: turbocommit [options]");
+    println!("{}", "   _________  ____ ___  ____ ___  (_) /_".purple());
+    println!("{}", "  / ___/ __ \\/ __ `__ \\/ __ `__ \\/ / __/".red());
+    println!("{}", " / /__/ /_/ / / / / / / / / / / / / /_".yellow());
+    println!("{}", " \\___/\\____/_/ /_/ /_/_/ /_/ /_/_/\\__/".green());
+
+    println!("\nUsage: turbocommit [options] [message]\n");
     println!("Options:");
-    println!("  -n <n>   Number of choices to generate (default: 1)");
-    println!("  -m <msg> Extra message passed to the AI");
+    println!("  -n <n>   Number of choices to generate (default: 1)\n");
+    println!("Anything else will be concatenated into an extra message given to the AI");
     process::exit(1);
 }
