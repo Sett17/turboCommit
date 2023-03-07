@@ -35,6 +35,15 @@ impl Options {
                 "-h" => help(),
                 "--help" => help(),
                 _ => {
+                    if arg.starts_with('-') {
+                        println!(
+                            "{} {} {}",
+                            "Unknown option: ".red(),
+                            arg.purple().bold(),
+                            "\nPlease use -h or --help for help.".bright_black()
+                        );
+                        process::exit(1);
+                    }
                     msg.push_str(&arg);
                     msg.push(' ');
                 }
