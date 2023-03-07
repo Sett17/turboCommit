@@ -1,7 +1,11 @@
 use std::{env, process};
 
 use colored::Colorize;
+use inquire::error::InquireResult;
+use inquire::validator::Validation;
+use inquire::{Confirm, CustomUserError};
 
+use crate::git::commit;
 use openai::Message;
 
 mod cli;
@@ -107,11 +111,65 @@ fn main() {
                     format!("{}", resp.usage.total_tokens).green(),
                     format!("{}", openai::cost(resp.usage.total_tokens)).green()
                 );
-                for choice in resp.choices {
-                    println!("===============================");
+                for (i, choice) in resp.choices.iter().enumerate() {
+                    println!("\n[{}]============================", i);
                     println!("{}", choice.message.content);
                 }
                 println!("===============================");
+                if resp.choices.len() == 1 {
+                    let answer = match Confirm::new("Do you want to commit with this message? ")
+                        .with_default(true)
+                        .prompt()
+                    {
+                        Ok(answer) => answer,
+                        Err(e) => {
+                            println!("{}", e);
+                            process::exit(1);
+                        }
+                    };
+                    if answer {
+                        match commit(resp.choices[0].message.content.clone()) {
+                            Ok(_) => {
+                                println!("\n{} 🎉", "Commit successful!".green());
+                                process::exit(0);
+                            }
+                            Err(e) => {
+                                println!("{}", e);
+                                process::exit(1);
+                            }
+                        }
+                    }
+                }
+                let max_index = resp.choices.len() as i32;
+                let commit_index = match inquire::CustomType::<i32>::new(
+                    "Which commit message do you want to use? ",
+                )
+                .with_validator(move |i: &i32| {
+                    if *i < 0 || *i >= max_index {
+                        Err(CustomUserError::from("Invalid index"))
+                    } else {
+                        Ok(Validation::Valid)
+                    }
+                })
+                .prompt()
+                {
+                    Ok(i) => i,
+                    Err(e) => {
+                        println!("{}", e);
+                        process::exit(1);
+                    }
+                };
+                let commit_msg = resp.choices[commit_index as usize].message.content.clone();
+                match commit(commit_msg) {
+                    Ok(_) => {
+                        println!("\n{} 🎉", "Commit successful!".green());
+                        process::exit(0);
+                    }
+                    Err(e) => {
+                        println!("{}", e);
+                        process::exit(1);
+                    }
+                }
             }
             _ => {
                 let e = match res.text() {

@@ -105,3 +105,15 @@ fn diff_from_files(v: Vec<&str>) -> anyhow::Result<String> {
         false => Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string())),
     }
 }
+
+pub(crate) fn commit(msg: String) -> anyhow::Result<()> {
+    let output = Command::new("git")
+        .arg("commit")
+        .arg("-m")
+        .arg(msg)
+        .output()?;
+    match output.status.success() {
+        true => Ok(()),
+        false => Err(anyhow!(String::from_utf8_lossy(&output.stderr).to_string())),
+    }
+}
