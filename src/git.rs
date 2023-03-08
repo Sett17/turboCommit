@@ -13,16 +13,13 @@ pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Resul
             println!(
                 "{} {}",
                 "The request is too long!".red(),
-                format!(
-                    "The request is ~{} tokens long, while the maximum is 4096.",
-                    tokens_length
-                )
-                .bright_black()
+                format!("The request is ~{tokens_length} tokens long, while the maximum is 4096.")
+                    .bright_black()
             );
             let list_str = match staged_files() {
                 Ok(list) => list,
                 Err(e) => {
-                    println!("{}", e);
+                    println!("{e}");
                     process::exit(1);
                 }
             };
@@ -37,12 +34,12 @@ pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Resul
                 Ok(ans) => match diff_from_files(ans) {
                     Ok(diff) => check_diff(&diff, system_len, extra_len),
                     Err(e) => {
-                        println!("{}", e);
+                        println!("{e}");
                         process::exit(1);
                     }
                 },
                 Err(e) => {
-                    println!("{}", e);
+                    println!("{e}");
                     process::exit(1);
                 }
             }
@@ -66,11 +63,12 @@ fn staged_files() -> anyhow::Result<String> {
         .arg("--staged")
         .arg("--name-only")
         .output()?;
-    match diff.status.success() {
-        true => Ok(String::from_utf8_lossy(&diff.stdout)
+    if diff.status.success() {
+        Ok(String::from_utf8_lossy(&diff.stdout)
             .to_string()
-            .replace("\r\n", "\n")),
-        false => Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string())),
+            .replace("\r\n", "\n"))
+    } else {
+        Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string()))
     }
 }
 
@@ -81,11 +79,12 @@ pub fn diff() -> anyhow::Result<String> {
         .arg("--minimal")
         .arg("-U2")
         .output()?;
-    match diff.status.success() {
-        true => Ok(String::from_utf8_lossy(&diff.stdout)
+    if diff.status.success() {
+        Ok(String::from_utf8_lossy(&diff.stdout)
             .to_string()
-            .replace("\r\n", "\n")),
-        false => Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string())),
+            .replace("\r\n", "\n"))
+    } else {
+        Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string()))
     }
 }
 
@@ -101,22 +100,24 @@ fn diff_from_files(v: Vec<&str>) -> anyhow::Result<String> {
         cmd.arg(file);
     }
     let diff = cmd.output()?;
-    match diff.status.success() {
-        true => Ok(String::from_utf8_lossy(&diff.stdout)
+    if diff.status.success() {
+        Ok(String::from_utf8_lossy(&diff.stdout)
             .to_string()
-            .replace("\r\n", "\n")),
-        false => Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string())),
+            .replace("\r\n", "\n"))
+    } else {
+        Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string()))
     }
 }
 
-pub(crate) fn commit(msg: String) -> anyhow::Result<()> {
+pub fn commit(msg: String) -> anyhow::Result<()> {
     let output = Command::new("git")
         .arg("commit")
         .arg("-m")
         .arg(msg)
         .output()?;
-    match output.status.success() {
-        true => Ok(()),
-        false => Err(anyhow!(String::from_utf8_lossy(&output.stderr).to_string())),
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(anyhow!(String::from_utf8_lossy(&output.stderr).to_string()))
     }
 }

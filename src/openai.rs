@@ -20,20 +20,20 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn system<S: Into<String>>(content: S) -> Message {
-        Message {
+    pub fn system<S: Into<String>>(content: S) -> Self {
+        Self {
             role: Role::System,
             content: content.into(),
         }
     }
-    pub fn user<S: Into<String>>(content: S) -> Message {
-        Message {
+    pub fn user<S: Into<String>>(content: S) -> Self {
+        Self {
             role: Role::User,
             content: content.into(),
         }
     }
-    pub fn assistant<S: Into<String>>(content: S) -> Message {
-        Message {
+    pub fn assistant<S: Into<String>>(content: S) -> Self {
+        Self {
             role: Role::Assistant,
             content: content.into(),
         }
@@ -76,8 +76,8 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new<S: Into<String>>(model: S, messages: Vec<Message>, n: i32) -> Request {
-        Request {
+    pub fn new<S: Into<String>>(model: S, messages: Vec<Message>, n: i32) -> Self {
+        Self {
             model: model.into(),
             messages,
             n,

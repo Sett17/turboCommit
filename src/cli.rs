@@ -10,8 +10,8 @@ pub struct Options {
 }
 
 impl Options {
-    pub fn new(args: env::Args) -> Options {
-        let mut opts = Options {
+    pub fn new(args: env::Args) -> Self {
+        let mut opts = Self {
             n: 1,
             msg: String::new(),
         };
@@ -21,21 +21,20 @@ impl Options {
             match arg.as_str() {
                 "-n" => {
                     if let Some(n) = iter.next() {
-                        opts.n = match n.parse() {
-                            Ok(n) => cmp::max(1, n),
-                            Err(_) => {
+                        opts.n = n.parse().map_or_else(
+                            |_| {
                                 println!(
                                     "{} {}",
                                     "Could not parse n.".red(),
-                                    "Please enter an integer.".bright_black()
+                                    "Please enter an number.".bright_black()
                                 );
                                 process::exit(1);
-                            }
-                        };
+                            },
+                            |n| cmp::max(1, n),
+                        );
                     }
                 }
-                "-h" => help(),
-                "--help" => help(),
+                "-h" | "--help" => help(),
                 _ => {
                     if arg.starts_with('-') {
                         println!(
