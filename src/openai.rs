@@ -99,7 +99,7 @@ pub struct Response {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Choice {
     pub index: i64,
-    pub finish_reason: String,
+    pub finish_reason: Option<String>,
     pub message: Message,
 }
 
