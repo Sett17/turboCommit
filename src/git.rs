@@ -3,6 +3,7 @@ use anyhow::anyhow;
 use colored::Colorize;
 use inquire::MultiSelect;
 use std::cmp::Ordering;
+use std::process;
 use std::process::Command;
 
 pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Result<String> {
@@ -21,7 +22,8 @@ pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Resul
             let list_str = match staged_files() {
                 Ok(list) => list,
                 Err(e) => {
-                    panic!("{}", e);
+                    println!("{}", e);
+                    process::exit(1);
                 }
             };
             let list = list_str
@@ -35,11 +37,13 @@ pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Resul
                 Ok(ans) => match diff_from_files(ans) {
                     Ok(diff) => check_diff(&diff, system_len, extra_len),
                     Err(e) => {
-                        panic!("{}", e);
+                        println!("{}", e);
+                        process::exit(1);
                     }
                 },
                 Err(e) => {
-                    panic!("{}", e);
+                    println!("{}", e);
+                    process::exit(1);
                 }
             }
         }
