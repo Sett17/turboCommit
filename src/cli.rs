@@ -1,3 +1,5 @@
+use crate::openai::count_token;
+use crate::SYSTEM_MSG;
 use colored::Colorize;
 use std::{cmp, env, process};
 
@@ -73,5 +75,9 @@ fn help() {
     println!("Options:");
     println!("  -n <n>   Number of choices to generate (default: 1)\n");
     println!("Anything else will be concatenated into an extra message given to the AI");
+    println!(
+        "\nThe prompt is about ~{} tokens long",
+        format!("{}", count_token(SYSTEM_MSG).unwrap_or(0)).green()
+    );
     process::exit(1);
 }
