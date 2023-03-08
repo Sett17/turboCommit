@@ -1,7 +1,7 @@
 use std::{env, process};
 
 use colored::Colorize;
-use inquire::error::InquireResult;
+
 use inquire::validator::Validation;
 use inquire::{Confirm, CustomUserError};
 
@@ -138,6 +138,8 @@ fn main() {
                                 process::exit(1);
                             }
                         }
+                    } else {
+                        process::exit(0);
                     }
                 }
                 let max_index = resp.choices.len() as i32;
