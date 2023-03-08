@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use crate::SYSTEM_MSG;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -112,7 +111,7 @@ pub struct Usage {
 
 pub fn count_token(s: &str) -> anyhow::Result<usize> {
     let bpe = cl100k_base()?;
-    let tokens = bpe.encode_with_special_tokens(&s);
+    let tokens = bpe.encode_with_special_tokens(s);
     Ok(tokens.len())
 }
 
