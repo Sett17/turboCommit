@@ -110,13 +110,9 @@ pub struct Usage {
     pub total_tokens: i64,
 }
 
-pub fn count_token(s: &str, extra: &str) -> anyhow::Result<usize> {
+pub fn count_token(s: &str) -> anyhow::Result<usize> {
     let bpe = cl100k_base()?;
-    let mut text = SYSTEM_MSG.to_string();
-    text += "\n";
-    text += extra;
-    text += s;
-    let tokens = bpe.encode_with_special_tokens(&text);
+    let tokens = bpe.encode_with_special_tokens(&s);
     Ok(tokens.len())
 }
 

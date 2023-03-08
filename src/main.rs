@@ -65,7 +65,10 @@ fn main() {
         process::exit(1);
     }
 
-    let diff = match git::check_diff(full_diff, &options.msg) {
+    let system_len = openai::count_token(SYSTEM_MSG).unwrap_or(0);
+    let extra_len = openai::count_token(&options.msg).unwrap_or(0);
+
+    let diff = match git::check_diff(&full_diff, system_len, extra_len) {
         Ok(diff) => diff,
         Err(e) => {
             println!("{}", e);

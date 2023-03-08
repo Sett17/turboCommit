@@ -5,10 +5,9 @@ use inquire::MultiSelect;
 use std::cmp::Ordering;
 use std::process::Command;
 
-pub fn check_diff<S: Into<String>>(s: S, extra: &String) -> anyhow::Result<String> {
-    let diff = s.into();
-    let tokens_length = openai::count_token(&diff, extra)?;
-    match tokens_length.cmp(&4096_usize) {
+pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Result<String> {
+    let tokens_length = openai::count_token(s)?;
+    match (tokens_length + system_len + extra_len).cmp(&4096_usize) {
         Ordering::Greater => {
             println!(
                 "{} {}",
@@ -34,7 +33,7 @@ pub fn check_diff<S: Into<String>>(s: S, extra: &String) -> anyhow::Result<Strin
 
             match ans {
                 Ok(ans) => match diff_from_files(ans) {
-                    Ok(diff) => check_diff(diff, extra),
+                    Ok(diff) => check_diff(&diff, system_len, extra_len),
                     Err(e) => {
                         panic!("{}", e);
                     }
@@ -44,7 +43,7 @@ pub fn check_diff<S: Into<String>>(s: S, extra: &String) -> anyhow::Result<Strin
                 }
             }
         }
-        _ => Ok(diff),
+        _ => Ok(s.parse()?),
     }
 }
 
