@@ -5,7 +5,6 @@ use colored::Colorize;
 use inquire::validator::Validation;
 use inquire::{Confirm, CustomUserError};
 
-use crate::git::commit;
 use openai::Message;
 
 mod cli;
@@ -45,13 +44,7 @@ fn main() {
     }
 
     println!();
-    let full_diff = match git::diff() {
-        Ok(diff) => diff,
-        Err(e) => {
-            println!("{e}");
-            process::exit(1);
-        }
-    };
+    let full_diff = git::diff();
 
     if full_diff.trim().is_empty() {
         println!(
@@ -73,13 +66,16 @@ fn main() {
         }
     };
 
-    let mut messages = vec![Message::system(SYSTEM_MSG), Message::user(diff)];
+    let mut messages = vec![
+        Message::system(String::from(SYSTEM_MSG)),
+        Message::user(diff),
+    ];
 
     if !options.msg.is_empty() {
         messages.push(Message::user(options.msg));
     }
 
-    let req = openai::Request::new(MODEL, messages, options.n);
+    let req = openai::Request::new(String::from(MODEL), messages, options.n);
 
     let json = match serde_json::to_string(&req) {
         Ok(json) => json,
@@ -136,16 +132,8 @@ fn main() {
                         }
                     };
                     if answer {
-                        match commit(resp.choices[0].message.content.clone()) {
-                            Ok(_) => {
-                                println!("\n{} 🎉", "Commit successful!".green());
-                                process::exit(0);
-                            }
-                            Err(e) => {
-                                println!("{e}");
-                                process::exit(1);
-                            }
-                        }
+                        git::commit(resp.choices[0].message.content.clone());
+                        println!("{} 🎉", "Commit successful!".green());
                     } else {
                         process::exit(0);
                     }
@@ -170,16 +158,8 @@ fn main() {
                     }
                 };
                 let commit_msg = resp.choices[commit_index].message.content.clone();
-                match commit(commit_msg) {
-                    Ok(_) => {
-                        println!("\n{} 🎉", "Commit successful!".green());
-                        process::exit(0);
-                    }
-                    Err(e) => {
-                        println!("{e}");
-                        process::exit(1);
-                    }
-                }
+                git::commit(commit_msg);
+                println!("{} 🎉", "Commit successful!".green());
             } else {
                 let e = match response.text() {
                     Ok(e) => e,

@@ -1,10 +1,10 @@
 use crate::openai;
-use anyhow::anyhow;
+
 use colored::Colorize;
 use inquire::MultiSelect;
 use std::cmp::Ordering;
 use std::process;
-use std::process::Command;
+use std::process::{Command, Output};
 
 pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Result<String> {
     let tokens_length = openai::count_token(s)?;
@@ -16,13 +16,7 @@ pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Resul
                 format!("The request is ~{tokens_length} tokens long, while the maximum is 4096.")
                     .bright_black()
             );
-            let list_str = match staged_files() {
-                Ok(list) => list,
-                Err(e) => {
-                    println!("{e}");
-                    process::exit(1);
-                }
-            };
+            let list_str = staged_files();
             let list = list_str
                 .split('\n')
                 .filter(|s| !s.is_empty())
@@ -31,13 +25,7 @@ pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Resul
                 .prompt();
 
             match ans {
-                Ok(ans) => match diff_from_files(ans) {
-                    Ok(diff) => check_diff(&diff, system_len, extra_len),
-                    Err(e) => {
-                        println!("{e}");
-                        process::exit(1);
-                    }
-                },
+                Ok(ans) => check_diff(&diff_from_files(ans), system_len, extra_len),
                 Err(e) => {
                     println!("{e}");
                     process::exit(1);
@@ -53,42 +41,68 @@ pub fn is_repo() -> bool {
         .arg("rev-parse")
         .arg("--is-inside-work-tree")
         .output()
-        .expect("Failed to execute git command");
+        .map_or_else(
+            |e| {
+                println!(
+                    "{} {}",
+                    "Error while running git:".red(),
+                    format!("{}.", e).bright_black()
+                );
+                process::exit(1);
+            },
+            |o| o,
+        );
     output.status.success()
 }
 
-fn staged_files() -> anyhow::Result<String> {
-    let diff = Command::new("git")
+fn staged_files() -> String {
+    Command::new("git")
         .arg("diff")
         .arg("--staged")
         .arg("--name-only")
-        .output()?;
-    if diff.status.success() {
-        Ok(String::from_utf8_lossy(&diff.stdout)
-            .to_string()
-            .replace("\r\n", "\n"))
-    } else {
-        Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string()))
-    }
+        .output()
+        .map_or_else(
+            |e| {
+                println!(
+                    "{} {}",
+                    "Error while running git:".red(),
+                    format!("{}.", e).bright_black()
+                );
+                process::exit(1);
+            },
+            |o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .to_string()
+                    .replace("\r\n", "\n")
+            },
+        )
 }
 
-pub fn diff() -> anyhow::Result<String> {
-    let diff = Command::new("git")
+pub fn diff() -> String {
+    Command::new("git")
         .arg("diff")
         .arg("--staged")
         .arg("--minimal")
         .arg("-U2")
-        .output()?;
-    if diff.status.success() {
-        Ok(String::from_utf8_lossy(&diff.stdout)
-            .to_string()
-            .replace("\r\n", "\n"))
-    } else {
-        Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string()))
-    }
+        .output()
+        .map_or_else(
+            |e| {
+                println!(
+                    "{} {}",
+                    "Error while running git:".red(),
+                    format!("{}.", e).bright_black()
+                );
+                process::exit(1);
+            },
+            |o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .to_string()
+                    .replace("\r\n", "\n")
+            },
+        )
 }
 
-fn diff_from_files(v: Vec<&str>) -> anyhow::Result<String> {
+fn diff_from_files(v: Vec<&str>) -> String {
     let mut binding = Command::new("git");
     let cmd = binding
         .arg("diff")
@@ -99,25 +113,38 @@ fn diff_from_files(v: Vec<&str>) -> anyhow::Result<String> {
     for file in v {
         cmd.arg(file);
     }
-    let diff = cmd.output()?;
-    if diff.status.success() {
-        Ok(String::from_utf8_lossy(&diff.stdout)
-            .to_string()
-            .replace("\r\n", "\n"))
-    } else {
-        Err(anyhow!(String::from_utf8_lossy(&diff.stderr).to_string()))
-    }
+    cmd.output().map_or_else(
+        |e| {
+            println!(
+                "{} {}",
+                "Error while running git:".red(),
+                format!("{}.", e).bright_black()
+            );
+            process::exit(1);
+        },
+        |o| {
+            String::from_utf8_lossy(&o.stdout)
+                .to_string()
+                .replace("\r\n", "\n")
+        },
+    )
 }
 
-pub fn commit(msg: String) -> anyhow::Result<()> {
+pub fn commit(msg: String) {
     let output = Command::new("git")
         .arg("commit")
         .arg("-m")
         .arg(msg)
-        .output()?;
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(anyhow!(String::from_utf8_lossy(&output.stderr).to_string()))
-    }
+        .output()
+        .map_or_else(
+            |e| {
+                println!(
+                    "{} {}",
+                    "Error while running git:".red(),
+                    format!("{}.", e).bright_black()
+                );
+                process::exit(1);
+            },
+            |_| (),
+        );
 }
