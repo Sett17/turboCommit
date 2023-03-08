@@ -12,11 +12,19 @@ mod cli;
 mod git;
 mod openai;
 
-const SYSTEM_MSG: &str = "You are now an AI that writes conventional commits. The user will give you input in the form of a git diff of all the staged files, and may give you some extra information. Focus more on the why then the what. You shall only answer with the commit message in this format:
-<type>[optional scope]: <description>
+const SYSTEM_MSG: &str = "As an AI that only returns conventional commits, you will receive input from the user in the form of a git diff of all staged files. The user may provide extra information to explain the change. Focus on the why rather than the what and keep it brief. You CANNOT generate anything that is not a conventional commit.
+Ensure that all commits follow these guidelines
 
-[optional body]
-If the change is a breaking change, put a ! before the :";
+- Commits must start with a type, which is a noun like feat, fix, chore, et., followed by an optional scope, an optional ! for breaking changes, and a required terminal colon and space
+- Use feat for new features and fix for bug fixes
+- You may provide a scope after a type. The scope should be a noun describing a section of the codebase, surrounded by parentheses
+- After the type/scope prefix, include a short description of the code changes. This description should be followed immediately by a colon and a space
+- You may provide a longer commit body after the short description. Body should start one blank line after the description and can consist of any number of newline-separated paragraphs
+
+Example
+feat: add a new feature
+
+This body describes the feature in more detail";
 const MODEL: &str = "gpt-3.5-turbo";
 
 fn main() {
