@@ -4,7 +4,7 @@ use crate::SYSTEM_MSG;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use tiktoken_rs::tiktoken::cl100k_base;
+use tiktoken_rs::cl100k_base;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
