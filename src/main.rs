@@ -116,10 +116,13 @@ fn main() {
                     format!("{}", openai::cost(resp.usage.total_tokens)).green()
                 );
                 for (i, choice) in resp.choices.iter().enumerate() {
-                    println!("\n[{i}]============================");
+                    println!(
+                        "\n{}",
+                        format!("[{i}]============================").bright_black()
+                    );
                     println!("{}", choice.message.content);
                 }
-                println!("===============================");
+                println!("{}", "================================".bright_black());
                 if resp.choices.len() == 1 {
                     let answer = match Confirm::new("Do you want to commit with this message? ")
                         .with_default(true)
@@ -139,9 +142,10 @@ fn main() {
                     }
                 }
                 let max_index = resp.choices.len();
-                let commit_index = match inquire::CustomType::<usize>::new(
-                    "Which commit message do you want to use? ",
-                )
+                let commit_index = match inquire::CustomType::<usize>::new(&format!(
+                    "Which commit message do you want to use? {}",
+                    "<ESC> to cancel".bright_black()
+                ))
                 .with_validator(move |i: &usize| {
                     if *i >= max_index {
                         Err(CustomUserError::from("Invalid index"))
