@@ -13,8 +13,11 @@ pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Resul
             println!(
                 "{} {}",
                 "The request is too long!".red(),
-                format!("The request is ~{tokens_length} tokens long, while the maximum is 4096.")
-                    .bright_black()
+                format!(
+                    "The request is ~{} tokens long, while the maximum is 4096.",
+                    tokens_length + system_len + extra_len
+                )
+                .bright_black()
             );
             let list_str = staged_files();
             let list = list_str
