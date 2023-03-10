@@ -72,11 +72,25 @@ pub struct Request {
     pub model: String,
     pub messages: Vec<Message>,
     pub n: i32,
+    pub temperature: f64,
+    pub frequency_penalty: f64,
 }
 
 impl Request {
-    pub fn new(model: String, messages: Vec<Message>, n: i32) -> Self {
-        Self { model, messages, n }
+    pub fn new(
+        model: String,
+        messages: Vec<Message>,
+        n: i32,
+        temperature: f64,
+        frequency_penalty: f64,
+    ) -> Self {
+        Self {
+            model,
+            messages,
+            n,
+            temperature,
+            frequency_penalty,
+        }
     }
 }
 

@@ -7,6 +7,8 @@ use std::{cmp, env, process};
 pub struct Options {
     pub n: i32,
     pub msg: String,
+    pub t: f64,
+    pub f: f64,
 }
 
 impl Options {
@@ -14,6 +16,8 @@ impl Options {
         let mut opts = Self {
             n: 1,
             msg: String::new(),
+            t: 1.0,
+            f: 0.0,
         };
         let mut iter = args.skip(1);
         let mut msg = String::new();
@@ -26,11 +30,57 @@ impl Options {
                                 println!(
                                     "{} {}",
                                     "Could not parse n.".red(),
-                                    "Please enter an number.".bright_black()
+                                    "Please enter an integer.".bright_black()
                                 );
                                 process::exit(1);
                             },
                             |n| cmp::max(1, n),
+                        );
+                    }
+                }
+                "-t" => {
+                    if let Some(t) = iter.next() {
+                        opts.t = t.parse().map_or_else(
+                            |_| {
+                                println!(
+                                    "{} {}",
+                                    "Could not parse t.".red(),
+                                    "Please enter a float between 0 and 2.".bright_black()
+                                );
+                                process::exit(1);
+                            },
+                            |t| {
+                                if t < 0.0 {
+                                    0.0
+                                } else if t > 2.0 {
+                                    2.0
+                                } else {
+                                    t
+                                }
+                            },
+                        );
+                    }
+                }
+                "-f" => {
+                    if let Some(f) = iter.next() {
+                        opts.f = f.parse().map_or_else(
+                            |_| {
+                                println!(
+                                    "{} {}",
+                                    "Could not parse f.".red(),
+                                    "Please enter a float between -2.0 and 2.0.".bright_black()
+                                );
+                                process::exit(1);
+                            },
+                            |f| {
+                                if f < -2.0 {
+                                    -2.0
+                                } else if f > 2.0 {
+                                    2.0
+                                } else {
+                                    f
+                                }
+                            },
                         );
                     }
                 }
@@ -73,6 +123,11 @@ fn help() {
     println!("\nUsage: turbocommit [options] [message]\n");
     println!("Options:");
     println!("  -n <n>   Number of choices to generate (default: 1)\n");
+    println!(
+        "  -t <t>   Temperature (|t| 0.0 < t < 2.0) (default: 1.0) {}\n",
+        "(https://platform.openai.com/docs/api-reference/chat/create#chat/create-temperature)"
+            .bright_black()
+    );
     println!("Anything else will be concatenated into an extra message given to the AI");
     println!(
         "\nThe prompt is about ~{} tokens long",

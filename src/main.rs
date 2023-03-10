@@ -75,7 +75,13 @@ fn main() {
         messages.push(Message::user(options.msg));
     }
 
-    let req = openai::Request::new(String::from(MODEL), messages, options.n);
+    let req = openai::Request::new(
+        String::from(MODEL),
+        messages,
+        options.n,
+        options.t,
+        options.f,
+    );
 
     let json = match serde_json::to_string(&req) {
         Ok(json) => json,
