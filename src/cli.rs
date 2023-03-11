@@ -5,19 +5,19 @@ use std::{cmp, env, process};
 
 #[derive(Debug)]
 pub struct Options {
-    pub n: i32,
-    pub msg: String,
-    pub t: f64,
-    pub f: f64,
+    pub n: Option<i32>,
+    pub msg: Option<String>,
+    pub t: Option<f64>,
+    pub f: Option<f64>,
 }
 
 impl Options {
     pub fn new(args: env::Args) -> Self {
         let mut opts = Self {
-            n: 1,
-            msg: String::new(),
-            t: 1.0,
-            f: 0.0,
+            n: Some(1),
+            msg: Some(String::new()),
+            t: Some(1.0),
+            f: Some(0.0),
         };
         let mut iter = args.skip(1);
         let mut msg = String::new();
@@ -25,7 +25,7 @@ impl Options {
             match arg.as_str() {
                 "-n" => {
                     if let Some(n) = iter.next() {
-                        opts.n = n.parse().map_or_else(
+                        opts.n = Some(n.parse().map_or_else(
                             |_| {
                                 println!(
                                     "{} {}",
@@ -35,12 +35,12 @@ impl Options {
                                 process::exit(1);
                             },
                             |n| cmp::max(1, n),
-                        );
+                        ));
                     }
                 }
                 "-t" => {
                     if let Some(t) = iter.next() {
-                        opts.t = t.parse().map_or_else(
+                        opts.t = Some(t.parse().map_or_else(
                             |_| {
                                 println!(
                                     "{} {}",
@@ -58,12 +58,12 @@ impl Options {
                                     t
                                 }
                             },
-                        );
+                        ));
                     }
                 }
                 "-f" => {
                     if let Some(f) = iter.next() {
-                        opts.f = f.parse().map_or_else(
+                        opts.f = Some(f.parse().map_or_else(
                             |_| {
                                 println!(
                                     "{} {}",
@@ -81,7 +81,7 @@ impl Options {
                                     f
                                 }
                             },
-                        );
+                        ));
                     }
                 }
                 "-h" | "--help" => help(),
@@ -100,7 +100,7 @@ impl Options {
                 }
             }
         }
-        opts.msg = msg.trim().to_string();
+        opts.msg = Some(msg.trim().to_string());
         opts
     }
 }
@@ -124,8 +124,13 @@ fn help() {
     println!("Options:");
     println!("  -n <n>   Number of choices to generate (default: 1)\n");
     println!(
-        "  -t <t>   Temperature (|t| 0.0 < t < 2.0) (default: 1.0) {}\n",
+        "  -t <t>   Temperature (|t| 0.0 < t < 2.0) (default: 1.0)\n{}\n",
         "(https://platform.openai.com/docs/api-reference/chat/create#chat/create-temperature)"
+            .bright_black()
+    );
+    println!(
+        "  -f <f>   Frequency penalty (|f| -2.0 < f < 2.0) (default: 0.0)\n{}\n",
+        "(https://platform.openai.com/docs/api-reference/chat/create#chat/create-frequency-penalty)"
             .bright_black()
     );
     println!("Anything else will be concatenated into an extra message given to the AI");
