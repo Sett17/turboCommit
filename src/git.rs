@@ -1,10 +1,11 @@
-use crate::openai;
+use std::cmp::Ordering;
+use std::process;
+use std::process::Command;
 
 use colored::Colorize;
 use inquire::MultiSelect;
-use std::cmp::Ordering;
-use std::process;
-use std::process::{Command, Output};
+
+use crate::openai;
 
 pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Result<String> {
     let tokens_length = openai::count_token(s)?;
@@ -134,7 +135,7 @@ fn diff_from_files(v: Vec<&str>) -> String {
 }
 
 pub fn commit(msg: String) {
-    let output = Command::new("git")
+    Command::new("git")
         .arg("commit")
         .arg("-m")
         .arg(msg)
