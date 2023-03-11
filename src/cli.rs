@@ -133,9 +133,12 @@ fn help() {
         "(https://platform.openai.com/docs/api-reference/chat/create#chat/create-frequency-penalty)"
             .bright_black()
     );
-    println!("Anything else will be concatenated into an extra message given to the AI");
+    println!("Anything else will be concatenated into an extra message given to the AI\n");
+    println!("You can change the default for these options and the system message prompt in the config file, that is created the first time running the program\n{}",
+        home::home_dir().unwrap_or("".into()).join(".turbocommit.yaml").display());
+    println!("To go back to the default system message, delete the config file.\n");
     println!(
-        "\nThe prompt is about ~{} tokens long",
+        "\nThe system message is about ~{} tokens long",
         format!("{}", count_token(SYSTEM_MSG).unwrap_or(0)).green()
     );
     process::exit(1);
