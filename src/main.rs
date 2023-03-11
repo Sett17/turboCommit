@@ -155,6 +155,7 @@ fn main() {
                     if answer {
                         git::commit(resp.choices[0].message.content.clone());
                         println!("{} 🎉", "Commit successful!".green());
+                        process::exit(0);
                     } else {
                         process::exit(0);
                     }
