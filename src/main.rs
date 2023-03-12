@@ -54,8 +54,11 @@ fn main() {
     }
 
     let system_len = openai::count_token(&config.default_system_msg).unwrap_or(0);
-    let extra_len =
-        openai::count_token(options.msg.as_ref().unwrap_or(&String::from(""))).unwrap_or(0);
+    let extra_len = if options.msg.as_ref().is_some() && !options.msg.as_ref().unwrap().is_empty() {
+        openai::count_token(options.msg.as_ref().unwrap()).unwrap_or(0)
+    } else {
+        0
+    };
 
     let diff = match git::check_diff(&full_diff, system_len, extra_len) {
         Ok(diff) => diff,
@@ -91,6 +94,10 @@ fn main() {
     };
 
     let client = reqwest::blocking::Client::new();
+
+    println!("{}", "Asking AI...".bright_black());
+
+    let start = std::time::Instant::now();
     let response = client
         .post("https://api.openai.com/v1/chat/completions")
         .header("Content-Type", "application/json")
@@ -115,19 +122,26 @@ fn main() {
                         process::exit(1);
                     }
                 };
+                let duration = start.elapsed();
+                println!(
+                    "{} {}",
+                    "request took".bright_black(),
+                    format!("{}.{:03}s", duration.as_secs(), duration.subsec_millis()).purple()
+                );
                 println!(
                     "This used {} token, costing you ~{}$",
-                    format!("{}", resp.usage.total_tokens).green(),
-                    format!("{}", openai::cost(resp.usage.total_tokens)).green()
+                    format!("{}", resp.usage.total_tokens).purple(),
+                    format!("{:0.5}", openai::cost(resp.usage.total_tokens)).purple()
                 );
                 for (i, choice) in resp.choices.iter().enumerate() {
                     println!(
                         "\n{}",
-                        format!("[{i}]============================").bright_black()
+                        format!("[{}]============================", i.to_string().purple())
+                            .bright_black()
                     );
                     println!("{}", choice.message.content);
                 }
-                println!("{}", "================================".bright_black());
+                println!("{}", "\n================================".bright_black());
                 if resp.choices.len() == 1 {
                     let answer = match Confirm::new("Do you want to commit with this message? ")
                         .with_default(true)
@@ -141,7 +155,7 @@ fn main() {
                     };
                     if answer {
                         git::commit(resp.choices[0].message.content.clone());
-                        println!("{} 🎉", "Commit successful!".green());
+                        println!("{} 🎉", "Commit successful!".purple());
                         process::exit(0);
                     } else {
                         process::exit(0);
@@ -169,7 +183,7 @@ fn main() {
                 };
                 let commit_msg = resp.choices[commit_index].message.content.clone();
                 git::commit(commit_msg);
-                println!("{} 🎉", "Commit successful!".green());
+                println!("{} 🎉", "Commit successful!".purple());
             } else {
                 let e = match response.text() {
                     Ok(e) => e,

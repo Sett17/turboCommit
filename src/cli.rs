@@ -138,7 +138,11 @@ fn help() {
     println!("To go back to the default system message, delete the config file.\n");
     println!(
         "\nThe system message is about ~{} tokens long",
-        format!("{}", count_token(crate::config::SYSTEM_MSG).unwrap_or(0)).green()
+        format!(
+            "{}",
+            count_token(&crate::config::Config::default().default_system_msg).unwrap_or(0)
+        )
+        .green()
     );
     process::exit(1);
 }
