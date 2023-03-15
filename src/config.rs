@@ -36,13 +36,13 @@ This body describes the feature in more detail"),
 
 impl Config {
     pub fn load() -> Self {
-        let path = match home::home_dir() {
-            Some(path) => path.join(".turbocommit.yaml"),
-            None => {
+        let path = home::home_dir().map_or_else(
+            || {
                 println!("{}", "Unable to find home directory.".red());
                 process::exit(1);
-            }
-        };
+            },
+            |path| path.join(".turbocommit.yaml"),
+        );
         match std::fs::read_to_string(path) {
             Ok(config) => match serde_yaml::from_str(&config) {
                 Ok(config) => config,
@@ -73,13 +73,13 @@ impl Config {
         }
     }
     pub fn save(&self) -> Result<(), std::io::Error> {
-        let path = match home::home_dir() {
-            Some(path) => path.join(".turbocommit.yaml"),
-            None => {
+        let path = home::home_dir().map_or_else(
+            || {
                 println!("{}", "Unable to find home directory.".red());
                 process::exit(1);
-            }
-        };
+            },
+            |path| path.join(".turbocommit.yaml"),
+        );
         let config = match serde_yaml::to_string(self) {
             Ok(config) => config,
             Err(err) => {
