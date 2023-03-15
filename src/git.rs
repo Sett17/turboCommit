@@ -1,4 +1,4 @@
-use git2::{Commit, Repository};
+use git2::Repository;
 use std::process::Command;
 
 pub fn get_repo() -> Result<Repository, git2::Error> {
