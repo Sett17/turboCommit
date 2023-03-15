@@ -48,15 +48,7 @@ impl Options {
                                 );
                                 process::exit(1);
                             },
-                            |t| {
-                                if t < 0.0 {
-                                    0.0
-                                } else if t > 2.0 {
-                                    2.0
-                                } else {
-                                    t
-                                }
-                            },
+                            |t: f64| t.clamp(0.0, 2.0),
                         ));
                     }
                 }
@@ -71,15 +63,7 @@ impl Options {
                                 );
                                 process::exit(1);
                             },
-                            |f| {
-                                if f < -2.0 {
-                                    -2.0
-                                } else if f > 2.0 {
-                                    2.0
-                                } else {
-                                    f
-                                }
-                            },
+                            |f: f64| f.clamp(-2.0, 2.0),
                         ));
                     }
                 }
@@ -134,7 +118,7 @@ fn help() {
     );
     println!("Anything else will be concatenated into an extra message given to the AI\n");
     println!("You can change the default for these options and the system message prompt in the config file, that is created the first time running the program\n{}",
-        home::home_dir().unwrap_or("".into()).join(".turbocommit.yaml").display());
+        home::home_dir().unwrap_or_else(|| "".into()).join(".turbocommit.yaml").display());
     println!("To go back to the default system message, delete the config file.\n");
     println!(
         "\nThe system message is about ~{} tokens long",

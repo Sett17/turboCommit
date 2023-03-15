@@ -3,7 +3,7 @@ use std::{env, process};
 use colored::Colorize;
 
 use inquire::validator::Validation;
-use inquire::{Confirm, CustomUserError};
+use inquire::{Confirm, CustomUserError, MultiSelect};
 
 use config::Config;
 use openai::Message;
@@ -21,7 +21,7 @@ fn main() {
     match config.save() {
         Ok(_) => (),
         Err(err) => {
-            println!("{}", format!("Unable to write to config: {}", err).red());
+            println!("{}", format!("Unable to write to config: {err}").red());
             process::exit(1);
         }
     }
@@ -32,17 +32,29 @@ fn main() {
         process::exit(1);
     };
 
-    if !git::is_repo() {
-        println!(
-            "{} {}",
-            "Not a git repository.".red(),
-            "Please run this command in a git repository.".bright_black()
-        );
-        process::exit(1);
-    }
+    let repo = match git::get_repo() {
+        Ok(repo) => repo,
+        Err(e) => {
+            println!("{}", format!("{e}").red());
+            process::exit(1);
+        }
+    };
 
-    println!();
-    let full_diff = git::diff();
+    let staged_files = match git::staged_files(&repo) {
+        Ok(staged_file) => staged_file,
+        Err(e) => {
+            println!("{}", format!("{e}").red());
+            process::exit(1);
+        }
+    };
+
+    let full_diff = match git::diff(&repo, &staged_files) {
+        Ok(diff) => diff,
+        Err(e) => {
+            println!("{}", format!("{e}").red());
+            process::exit(1);
+        }
+    };
 
     if full_diff.trim().is_empty() {
         println!(
@@ -60,21 +72,60 @@ fn main() {
         0
     };
 
-    let diff = match git::check_diff(&full_diff, system_len, extra_len) {
-        Ok(diff) => diff,
+    let mut diff = full_diff;
+    let mut diff_tokens = match openai::count_token(&diff) {
+        Ok(tokens) => tokens,
         Err(e) => {
-            println!("{e}");
+            println!("{}", format!("{e}").red());
             process::exit(1);
         }
     };
+
+    while system_len + extra_len + diff_tokens > 4096 {
+        println!(
+            "{} {}",
+            "The request is too long!".red(),
+            format!(
+                "The request is ~{} tokens long, while the maximum is 4096.",
+                system_len + extra_len + diff_tokens
+            )
+            .bright_black()
+        );
+        let selected_files = match MultiSelect::new(
+            "Select the files you want to include in the diff:",
+            staged_files.clone(),
+        )
+        .prompt()
+        {
+            Ok(selected_files) => selected_files,
+            Err(e) => {
+                println!("{}", format!("{e}").red());
+                process::exit(1);
+            }
+        };
+        diff = match git::diff(&repo, &selected_files) {
+            Ok(diff) => diff,
+            Err(e) => {
+                println!("{}", format!("{e}").red());
+                process::exit(1);
+            }
+        };
+        diff_tokens = match openai::count_token(&diff) {
+            Ok(tokens) => tokens,
+            Err(e) => {
+                println!("{}", format!("{e}").red());
+                process::exit(1);
+            }
+        };
+    }
 
     let mut messages = vec![
         Message::system(config.default_system_msg),
         Message::user(diff),
     ];
 
-    if !options.msg.as_ref().unwrap_or(&String::from("")).is_empty() {
-        messages.push(Message::user(options.msg.unwrap_or(String::from(""))));
+    if !options.msg.as_ref().unwrap_or(&String::new()).is_empty() {
+        messages.push(Message::user(options.msg.unwrap_or_default()));
     }
 
     let req = openai::Request::new(
@@ -154,12 +205,16 @@ fn main() {
                         }
                     };
                     if answer {
-                        git::commit(resp.choices[0].message.content.clone());
+                        match git::commit(resp.choices[0].message.content.clone()) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                println!("{e}");
+                                process::exit(1);
+                            }
+                        };
                         println!("{} 🎉", "Commit successful!".purple());
-                        process::exit(0);
-                    } else {
-                        process::exit(0);
                     }
+                    process::exit(0);
                 }
                 let max_index = resp.choices.len();
                 let commit_index = match inquire::CustomType::<usize>::new(&format!(
@@ -182,7 +237,13 @@ fn main() {
                     }
                 };
                 let commit_msg = resp.choices[commit_index].message.content.clone();
-                git::commit(commit_msg);
+                match git::commit(commit_msg) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("{e}");
+                        process::exit(1);
+                    }
+                };
                 println!("{} 🎉", "Commit successful!".purple());
             } else {
                 let e = match response.text() {
