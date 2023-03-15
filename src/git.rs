@@ -1,154 +1,75 @@
-use std::cmp::Ordering;
-use std::process;
+use git2::{Commit, Repository};
 use std::process::Command;
 
-use colored::Colorize;
-use inquire::MultiSelect;
+pub fn get_repo() -> Result<Repository, git2::Error> {
+    Repository::open(".")
+}
 
-use crate::openai;
+pub fn staged_files(repo: &Repository) -> Result<Vec<String>, git2::Error> {
+    let idx = repo.index()?;
+    let head = repo.head().unwrap().peel_to_tree()?;
+    let diff = repo.diff_tree_to_index(Some(&head), Some(&idx), None)?;
+    Ok(diff
+        .deltas()
+        .map(|d| {
+            let path = d.new_file().path();
+            path.map_or_else(String::new, |path| path.to_str().unwrap_or("").to_string())
+        })
+        .collect())
+}
 
-pub fn check_diff(s: &str, system_len: usize, extra_len: usize) -> anyhow::Result<String> {
-    let tokens_length = openai::count_token(s)?;
-    match (tokens_length + system_len + extra_len).cmp(&4096_usize) {
-        Ordering::Greater => {
-            println!(
-                "{} {}",
-                "The request is too long!".red(),
-                format!(
-                    "The request is ~{} tokens long, while the maximum is 4096.",
-                    tokens_length + system_len + extra_len
-                )
-                .bright_black()
-            );
-            let list_str = staged_files();
-            let list = list_str
-                .split('\n')
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<&str>>();
-            let ans = MultiSelect::new("Select the files you want to include the diff from:", list)
-                .prompt();
+pub fn tracked_files(repo: &Repository) -> Result<Vec<String>, git2::Error> {
+    let mut ret = Vec::new();
+    let idx = repo.index()?;
+    idx.iter().for_each(|e| {
+        if let Ok(path) = String::from_utf8(e.path) {
+            ret.push(path);
+        };
+    });
+    Ok(ret)
+}
 
-            match ans {
-                Ok(ans) => check_diff(&diff_from_files(ans), system_len, extra_len),
-                Err(e) => {
-                    println!("{e}");
-                    process::exit(1);
-                }
+pub fn diff(repo: &Repository, files: &[String]) -> Result<String, git2::Error> {
+    let mut ret = String::new();
+
+    let idx = repo.index()?;
+    let head = repo.head().unwrap().peel_to_tree()?;
+    let diff = repo.diff_tree_to_index(Some(&head), Some(&idx), None)?;
+    diff.print(git2::DiffFormat::Patch, |delta, _, line| {
+        if let Some(path) = delta.new_file().path() {
+            if files.contains(&path.to_str().unwrap_or("").to_string()) {
+                ret.push(line.origin());
+                ret.push_str(std::str::from_utf8(line.content()).unwrap_or(""));
             }
         }
-        _ => Ok(s.parse()?),
-    }
+        true
+    })?;
+    Ok(ret)
 }
 
-pub fn is_repo() -> bool {
-    let output = Command::new("git")
-        .arg("rev-parse")
-        .arg("--is-inside-work-tree")
-        .output()
-        .map_or_else(
-            |e| {
-                println!(
-                    "{} {}",
-                    "Error while running git:".red(),
-                    format!("{}.", e).bright_black()
-                );
-                process::exit(1);
-            },
-            |o| o,
-        );
-    output.status.success()
-}
+// idk how this is really supposed to work
+// pub fn commit(repo: &Repository, files: &[String], msg: &str) -> Result<(), git2::Error> {
+//     let mut index = repo.index()?;
+//     // let all_files = tracked_files(repo)?;
+//     // for file in all_files {
+//     //     if !files.contains(&file) {
+//     //         index.remove_path(std::path::Path::new(&file))?;
+//     //     }
+//     // }
+//     // index.write()?;
+//     let oid = index.write_tree()?;
+//     let parent_commit = repo.head()?.peel_to_commit()?;
+//     let tree = repo.find_tree(oid)?;
+//     let sig = repo.signature()?;
+//     repo.commit(Some("HEAD"), &sig, &sig, msg, &tree, &[&parent_commit])?;
+//     Ok(())
+// }
 
-fn staged_files() -> String {
-    Command::new("git")
-        .arg("diff")
-        .arg("--staged")
-        .arg("--name-only")
-        .output()
-        .map_or_else(
-            |e| {
-                println!(
-                    "{} {}",
-                    "Error while running git:".red(),
-                    format!("{}.", e).bright_black()
-                );
-                process::exit(1);
-            },
-            |o| {
-                String::from_utf8_lossy(&o.stdout)
-                    .to_string()
-                    .replace("\r\n", "\n")
-            },
-        )
-}
-
-pub fn diff() -> String {
-    Command::new("git")
-        .arg("diff")
-        .arg("--staged")
-        .arg("--minimal")
-        .arg("-U2")
-        .output()
-        .map_or_else(
-            |e| {
-                println!(
-                    "{} {}",
-                    "Error while running git:".red(),
-                    format!("{}.", e).bright_black()
-                );
-                process::exit(1);
-            },
-            |o| {
-                String::from_utf8_lossy(&o.stdout)
-                    .to_string()
-                    .replace("\r\n", "\n")
-            },
-        )
-}
-
-fn diff_from_files(v: Vec<&str>) -> String {
-    let mut binding = Command::new("git");
-    let cmd = binding
-        .arg("diff")
-        .arg("--staged")
-        .arg("--minimal")
-        .arg("-U2")
-        .arg("--");
-    for file in v {
-        cmd.arg(file);
-    }
-    cmd.output().map_or_else(
-        |e| {
-            println!(
-                "{} {}",
-                "Error while running git:".red(),
-                format!("{}.", e).bright_black()
-            );
-            process::exit(1);
-        },
-        |o| {
-            String::from_utf8_lossy(&o.stdout)
-                .to_string()
-                .replace("\r\n", "\n")
-        },
-    )
-}
-
-pub fn commit(msg: String) {
+pub fn commit(msg: String) -> anyhow::Result<()> {
     Command::new("git")
         .arg("commit")
         .arg("-m")
         .arg(msg)
-        .output()
-        .map_or_else(
-            |e| {
-                println!(
-                    "{} {}",
-                    "Error while running git:".red(),
-                    format!("{}.", e).bright_black()
-                );
-                process::exit(1);
-            },
-            |_| (),
-        );
+        .output()?;
+    Ok(())
 }
