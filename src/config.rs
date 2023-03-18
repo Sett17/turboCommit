@@ -1,23 +1,25 @@
-use crate::cli;
+use crate::{cli, openai};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::process;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
+    pub model: openai::Model,
     pub default_temperature: f64,
     pub default_frequency_penalty: f64,
     pub default_number_of_choices: i32,
-    pub default_system_msg: String,
+    pub system_msg: String,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
+            model: openai::Model::Gpt35Turbo,
             default_temperature: 1.0,
             default_frequency_penalty: 0.0,
             default_number_of_choices: 1,
-            default_system_msg: String::from("As an AI that only returns conventional commits, you will receive input from the user in the form of a git diff of all staged files. The user may provide extra information to explain the change. Focus on the why rather than the what and keep it brief. You CANNOT generate anything that is not a conventional commit and a commit message only has 1 head line and at most 1 body.
+            system_msg: String::from("As an AI that only returns conventional commits, you will receive input from the user in the form of a git diff of all staged files. The user may provide extra information to explain the change. Focus on the why rather than the what and keep it brief. You CANNOT generate anything that is not a conventional commit and a commit message only has 1 head line and at most 1 body.
 Ensure that all commits follow these guidelines
 
 - Commits must start with a type, which is a noun like feat, fix, chore, et., followed by an optional scope, an optional ! for breaking changes, and a required terminal colon and space
@@ -93,14 +95,9 @@ impl Config {
         std::fs::write(path, config)
     }
     pub fn overwrite(&mut self, opts: &cli::Options) {
-        if let Some(n) = opts.n {
-            self.default_number_of_choices = n;
-        }
-        if let Some(t) = opts.t {
-            self.default_temperature = t;
-        }
-        if let Some(f) = opts.f {
-            self.default_frequency_penalty = f;
-        }
+        self.default_number_of_choices = opts.n;
+        self.default_temperature = opts.t;
+        self.default_frequency_penalty = opts.f;
+        self.model = opts.model;
     }
 }

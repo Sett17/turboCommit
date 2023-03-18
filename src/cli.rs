@@ -1,30 +1,43 @@
+use crate::openai;
 use crate::openai::count_token;
 use colored::Colorize;
+use std::str::FromStr;
 use std::{cmp, env, process};
 
 #[derive(Debug)]
 pub struct Options {
-    pub n: Option<i32>,
-    pub msg: Option<String>,
-    pub t: Option<f64>,
-    pub f: Option<f64>,
+    pub n: i32,
+    pub msg: String,
+    pub t: f64,
+    pub f: f64,
+    pub model: openai::Model,
+    pub dry_run: bool,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            n: 1,
+            msg: String::new(),
+            t: 1.0,
+            f: 0.0,
+            model: openai::Model::default(),
+            dry_run: false,
+        }
+    }
 }
 
 impl Options {
     pub fn new(args: env::Args) -> Self {
-        let mut opts = Self {
-            n: Some(1),
-            msg: Some(String::new()),
-            t: Some(1.0),
-            f: Some(0.0),
-        };
+        let mut opts = Self::default();
         let mut iter = args.skip(1);
         let mut msg = String::new();
+
         while let Some(arg) = iter.next() {
             match arg.as_str() {
                 "-n" => {
                     if let Some(n) = iter.next() {
-                        opts.n = Some(n.parse().map_or_else(
+                        opts.n = n.parse().map_or_else(
                             |_| {
                                 println!(
                                     "{} {}",
@@ -34,12 +47,12 @@ impl Options {
                                 process::exit(1);
                             },
                             |n| cmp::max(1, n),
-                        ));
+                        );
                     }
                 }
                 "-t" => {
                     if let Some(t) = iter.next() {
-                        opts.t = Some(t.parse().map_or_else(
+                        opts.t = t.parse().map_or_else(
                             |_| {
                                 println!(
                                     "{} {}",
@@ -49,12 +62,12 @@ impl Options {
                                 process::exit(1);
                             },
                             |t: f64| t.clamp(0.0, 2.0),
-                        ));
+                        );
                     }
                 }
                 "-f" => {
                     if let Some(f) = iter.next() {
-                        opts.f = Some(f.parse().map_or_else(
+                        opts.f = f.parse().map_or_else(
                             |_| {
                                 println!(
                                     "{} {}",
@@ -64,8 +77,30 @@ impl Options {
                                 process::exit(1);
                             },
                             |f: f64| f.clamp(-2.0, 2.0),
-                        ));
+                        );
                     }
+                }
+                "-m" | "--model" => {
+                    if let Some(model) = iter.next() {
+                        opts.model = match openai::Model::from_str(&model) {
+                            Ok(model) => model,
+                            Err(err) => {
+                                println!(
+                                    "{} {}",
+                                    format!("Could not parse model: {}", err).red(),
+                                    "Please enter a valid model.".bright_black()
+                                );
+                                process::exit(1);
+                            }
+                        };
+                    }
+                }
+                "-d" | "--dry-run" => {
+                    opts.dry_run = true;
+                    println!(
+                        "{}",
+                        "Dry run. Will not ask AI for completions".bright_black()
+                    );
                 }
                 "-h" | "--help" => help(),
                 _ => {
@@ -83,7 +118,7 @@ impl Options {
                 }
             }
         }
-        opts.msg = Some(msg.trim().to_string());
+        opts.msg = msg.trim().to_string();
         opts
     }
 }
@@ -105,14 +140,24 @@ fn help() {
 
     println!("\nUsage: turbocommit [options] [message]\n");
     println!("Options:");
-    println!("  -n <n>   Number of choices to generate (default: 1)\n");
     println!(
-        "  -t <t>   Temperature (|t| 0.0 < t < 2.0) (default: 1.0)\n{}\n",
+        "  -n <n>   Number of choices to generate (default: {})\n",
+        Options::default().n
+    );
+    println!(
+        "  -m <m>   Model to use (default: {})\n  --model <m>\n",
+        Options::default().model.to_string()
+    );
+    println!("  -d       Dry run. Will not ask AI for completions\n  --dry-run\n",);
+    println!(
+        "  -t <t>   Temperature (|t| 0.0 < t < 2.0) (default: {:1.1})\n{}\n",
+        Options::default().t,
         "(https://platform.openai.com/docs/api-reference/chat/create#chat/create-temperature)"
             .bright_black()
     );
     println!(
-        "  -f <f>   Frequency penalty (|f| -2.0 < f < 2.0) (default: 0.0)\n{}\n",
+        "  -f <f>   Frequency penalty (|f| -2.0 < f < 2.0) (default: {:1.1})\n{}\n",
+        Options::default().f,
         "(https://platform.openai.com/docs/api-reference/chat/create#chat/create-frequency-penalty)"
             .bright_black()
     );
@@ -124,7 +169,7 @@ fn help() {
         "\nThe system message is about ~{} tokens long",
         format!(
             "{}",
-            count_token(&crate::config::Config::default().default_system_msg).unwrap_or(0)
+            count_token(&crate::config::Config::default().system_msg).unwrap_or(0)
         )
         .green()
     );

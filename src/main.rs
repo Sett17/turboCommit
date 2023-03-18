@@ -13,8 +13,6 @@ mod config;
 mod git;
 mod openai;
 
-const MODEL: &str = "gpt-3.5-turbo";
-
 fn main() {
     let options = cli::Options::new(env::args());
     let mut config = Config::load();
@@ -65,12 +63,8 @@ fn main() {
         process::exit(1);
     }
 
-    let system_len = openai::count_token(&config.default_system_msg).unwrap_or(0);
-    let extra_len = if options.msg.as_ref().is_some() && !options.msg.as_ref().unwrap().is_empty() {
-        openai::count_token(options.msg.as_ref().unwrap()).unwrap_or(0)
-    } else {
-        0
-    };
+    let system_len = openai::count_token(&config.system_msg).unwrap_or(0);
+    let extra_len = openai::count_token(&options.msg).unwrap_or(0);
 
     let mut diff = full_diff;
     let mut diff_tokens = match openai::count_token(&diff) {
@@ -81,7 +75,11 @@ fn main() {
         }
     };
 
-    while system_len + extra_len + diff_tokens > 4096 {
+    println!(
+        "Requesting is ~{} tokens long.",
+        system_len + extra_len + diff_tokens
+    );
+    while system_len + extra_len + diff_tokens > config.model.context_size() {
         println!(
             "{} {}",
             "The request is too long!".red(),
@@ -119,21 +117,26 @@ fn main() {
         };
     }
 
-    let mut messages = vec![
-        Message::system(config.default_system_msg),
-        Message::user(diff),
-    ];
+    if options.dry_run {
+        println!("This will use ~${} prompt tokens, costing you ~${}.\nEach 1K completion tokens will cost you ~${}",
+            format!("{}", system_len + extra_len + diff_tokens).purple(),
+            format!("{:0.5}", config.model.cost(system_len + extra_len + diff_tokens, 0)).purple(),
+            format!("{:0.5}", config.model.cost(0, 1000)).purple());
+        process::exit(0);
+    }
 
-    if !options.msg.as_ref().unwrap_or(&String::new()).is_empty() {
-        messages.push(Message::user(options.msg.unwrap_or_default()));
+    let mut messages = vec![Message::system(config.system_msg), Message::user(diff)];
+
+    if !options.msg.is_empty() {
+        messages.push(Message::user(options.msg));
     }
 
     let req = openai::Request::new(
-        String::from(MODEL),
+        config.model.clone().to_string(),
         messages,
-        options.n.unwrap_or(1),
-        options.t.unwrap_or(1.0),
-        options.f.unwrap_or(0.0),
+        options.n,
+        options.t,
+        options.f,
     );
 
     let json = match serde_json::to_string(&req) {
@@ -180,9 +183,20 @@ fn main() {
                     format!("{}.{:03}s", duration.as_secs(), duration.subsec_millis()).purple()
                 );
                 println!(
-                    "This used {} token, costing you ~{}$",
+                    "This used {} tokens {}, costing you ~{}$",
                     format!("{}", resp.usage.total_tokens).purple(),
-                    format!("{:0.5}", openai::cost(resp.usage.total_tokens)).purple()
+                    format!(
+                        "({} for prompt, {} for completion)",
+                        resp.usage.prompt_tokens, resp.usage.completion_tokens
+                    )
+                    .bright_black(),
+                    format!(
+                        "{:0.5}",
+                        config
+                            .model
+                            .cost(resp.usage.prompt_tokens, resp.usage.total_tokens)
+                    )
+                    .purple()
                 );
                 for (i, choice) in resp.choices.iter().enumerate() {
                     println!(
