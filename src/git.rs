@@ -7,7 +7,7 @@ pub fn get_repo() -> Result<Repository, git2::Error> {
 
 pub fn staged_files(repo: &Repository) -> Result<Vec<String>, git2::Error> {
     let idx = repo.index()?;
-    let head = repo.head().unwrap().peel_to_tree()?;
+    let head = repo.head()?.peel_to_tree()?;
     let diff = repo.diff_tree_to_index(Some(&head), Some(&idx), None)?;
     Ok(diff
         .deltas()
@@ -33,7 +33,7 @@ pub fn diff(repo: &Repository, files: &[String]) -> Result<String, git2::Error> 
     let mut ret = String::new();
 
     let idx = repo.index()?;
-    let head = repo.head().unwrap().peel_to_tree()?;
+    let head = repo.head()?.peel_to_tree()?;
     let diff = repo.diff_tree_to_index(Some(&head), Some(&idx), None)?;
     diff.print(git2::DiffFormat::Patch, |delta, _, line| {
         if let Some(path) = delta.new_file().path() {

@@ -75,10 +75,6 @@ fn main() {
         }
     };
 
-    println!(
-        "Requesting is ~{} tokens long.",
-        system_len + extra_len + diff_tokens
-    );
     while system_len + extra_len + diff_tokens > config.model.context_size() {
         println!(
             "{} {}",
