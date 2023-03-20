@@ -2,6 +2,7 @@ use std::{env, process};
 
 use colored::Colorize;
 
+use crates_io_api::SyncClient;
 use inquire::validator::Validation;
 use inquire::{Confirm, CustomUserError, MultiSelect};
 
@@ -277,5 +278,37 @@ fn main() {
             println!("{e}");
             process::exit(1);
         }
+    }
+}
+
+fn check_version() -> anyhow::Result<()> {
+    let client = SyncClient::new(
+        "turbocommit latest version",
+        std::time::Duration::from_millis(1000),
+    )?;
+
+    let turbo = client.get_crate("turbocommit")?;
+    let newest_version = turbo.versions[0].num.clone();
+    let current_version = env!("CARGO_PKG_VERSION");
+
+    if current_version != newest_version {
+        println!(
+            "\n{} {}",
+            "New version available!".yellow(),
+            format!("v{}", newest_version).purple()
+        );
+        println!(
+            "To update, run\n{}",
+            "cargo install --force turbocommit".purple()
+        );
+    }
+    Ok(())
+}
+
+mod test {
+    use super::*;
+    #[test]
+    fn test_check_version() {
+        check_version();
     }
 }

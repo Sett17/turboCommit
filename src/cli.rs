@@ -103,6 +103,10 @@ impl Options {
                     );
                 }
                 "-h" | "--help" => help(),
+                "-v" | "--version" => {
+                    println!("turbocommit version {}", env!("CARGO_PKG_VERSION").purple());
+                    process::exit(0);
+                }
                 _ => {
                     if arg.starts_with('-') {
                         println!(
