@@ -308,11 +308,3 @@ fn check_version() -> anyhow::Result<()> {
     }
     Ok(())
 }
-
-mod test {
-    use super::*;
-    #[test]
-    fn test_check_version() {
-        check_version();
-    }
-}
