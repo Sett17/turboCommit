@@ -61,6 +61,7 @@ fn main() {
             "No staged files.".red(),
             "Please stage the files you want to commit.".bright_black()
         );
+        check_version();
         process::exit(1);
     }
 
@@ -119,6 +120,7 @@ fn main() {
             format!("{}", system_len + extra_len + diff_tokens).purple(),
             format!("{:0.5}", config.model.cost(system_len + extra_len + diff_tokens, 0)).purple(),
             format!("{:0.5}", config.model.cost(0, 1000)).purple());
+        check_version();
         process::exit(0);
     }
 
@@ -225,6 +227,7 @@ fn main() {
                         };
                         println!("{} 🎉", "Commit successful!".purple());
                     }
+                    check_version();
                     process::exit(0);
                 }
                 let max_index = resp.choices.len();
@@ -256,6 +259,7 @@ fn main() {
                     }
                 };
                 println!("{} 🎉", "Commit successful!".purple());
+                check_version();
             } else {
                 let e = match response.text() {
                     Ok(e) => e,
