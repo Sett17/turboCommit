@@ -18,17 +18,6 @@ pub fn staged_files(repo: &Repository) -> Result<Vec<String>, git2::Error> {
         .collect())
 }
 
-pub fn tracked_files(repo: &Repository) -> Result<Vec<String>, git2::Error> {
-    let mut ret = Vec::new();
-    let idx = repo.index()?;
-    idx.iter().for_each(|e| {
-        if let Ok(path) = String::from_utf8(e.path) {
-            ret.push(path);
-        };
-    });
-    Ok(ret)
-}
-
 pub fn diff(repo: &Repository, files: &[String]) -> Result<String, git2::Error> {
     let mut ret = String::new();
 
