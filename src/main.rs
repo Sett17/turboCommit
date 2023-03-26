@@ -258,9 +258,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if i == 0 {
                             format!(
                                 "This used {} tokens costing you about {}\n",
-                                format!("~${}", response_tokens + prompt_tokens).purple(),
+                                format!("{}", response_tokens + prompt_tokens).purple(),
                                 format!(
-                                    "{:0.4}",
+                                    "~${:0.4}",
                                     config.model.cost(prompt_tokens, response_tokens)
                                 )
                                 .purple()
