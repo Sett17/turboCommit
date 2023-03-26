@@ -1,20 +1,26 @@
-use std::{env, process};
-
 use colored::Colorize;
-
-use crates_io_api::SyncClient;
-use inquire::validator::Validation;
-use inquire::{Confirm, CustomUserError, MultiSelect};
-
 use config::Config;
+use crossterm::{
+    cursor::{MoveTo, MoveToColumn, MoveToPreviousLine},
+    execute,
+    style::{Color, Print, ResetColor, SetForegroundColor},
+    terminal::{self, Clear, ClearType},
+};
+use futures::stream::StreamExt;
+use inquire::{validator::Validation, Confirm, CustomUserError, MultiSelect};
 use openai::Message;
+
+use reqwest_eventsource::{Event, EventSource};
+use std::time::Duration;
+use std::{env, process};
 
 mod cli;
 mod config;
 mod git;
 mod openai;
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = cli::Options::new(env::args());
     let mut config = Config::load();
     match config.save() {
@@ -31,38 +37,56 @@ fn main() {
         process::exit(1);
     };
 
-    let repo = match git::get_repo() {
-        Ok(repo) => repo,
-        Err(e) => {
-            println!("{}", format!("{e}").red());
-            process::exit(1);
+    let loading_git_animation = tokio::spawn(async {
+        let emoji_support =
+            terminal_supports_emoji::supports_emoji(terminal_supports_emoji::Stream::Stdout);
+        let frames = if emoji_support {
+            vec![
+                "🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚",
+            ]
+        } else {
+            vec!["/", "-", "\\", "|"]
+        };
+        let mut current_frame = 0;
+        let mut stdout = std::io::stdout();
+        loop {
+            current_frame = (current_frame + 1) % frames.len();
+            match execute!(
+                stdout,
+                Clear(ClearType::CurrentLine),
+                MoveToColumn(0),
+                SetForegroundColor(Color::Yellow),
+                Print("Extracting Information ".bright_black()),
+                Print(frames[current_frame]),
+                ResetColor
+            ) {
+                Ok(_) => (),
+                Err(_) => {
+                    break;
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(150)).await;
         }
-    };
+    });
 
-    let staged_files = match git::staged_files(&repo) {
-        Ok(staged_file) => staged_file,
-        Err(e) => {
-            println!("{}", format!("{e}").red());
-            process::exit(1);
-        }
-    };
-
-    let full_diff = match git::diff(&repo, &staged_files) {
-        Ok(diff) => diff,
-        Err(e) => {
-            println!("{}", format!("{e}").red());
-            process::exit(1);
-        }
-    };
+    let repo = git::get_repo()?;
+    let staged_files = git::staged_files(&repo)?;
+    let full_diff = git::diff(&repo, &staged_files)?;
 
     if full_diff.trim().is_empty() {
+        loading_git_animation.abort();
+        execute!(
+            std::io::stdout(),
+            Clear(ClearType::CurrentLine),
+            MoveToColumn(0),
+        )?;
         println!(
             "{} {}",
             "No staged files.".red(),
             "Please stage the files you want to commit.".bright_black()
         );
-        check_version();
-        process::exit(1);
+        check_version().await;
+        process::exit(0);
     }
 
     let system_len = openai::count_token(&config.system_msg).unwrap_or(0);
@@ -77,6 +101,12 @@ fn main() {
         }
     };
 
+    loading_git_animation.abort();
+    execute!(
+        std::io::stdout(),
+        Clear(ClearType::CurrentLine),
+        MoveToColumn(0),
+    )?;
     while system_len + extra_len + diff_tokens > config.model.context_size() {
         println!(
             "{} {}",
@@ -116,13 +146,15 @@ fn main() {
     }
 
     if options.dry_run {
-        println!("This will use ~${} prompt tokens, costing you ~${}.\nEach 1K completion tokens will cost you ~${}",
+        println!("This will use ~{} prompt tokens, costing you ~${}.\nEach 1K completion tokens will cost you ~${}",
             format!("{}", system_len + extra_len + diff_tokens).purple(),
             format!("{:0.5}", config.model.cost(system_len + extra_len + diff_tokens, 0)).purple(),
             format!("{:0.5}", config.model.cost(0, 1000)).purple());
-        check_version();
+        check_version().await;
         process::exit(0);
     }
+
+    let prompt_tokens = system_len + extra_len + diff_tokens;
 
     let mut messages = vec![Message::system(config.system_msg), Message::user(diff)];
 
@@ -146,152 +178,189 @@ fn main() {
         }
     };
 
-    let client = reqwest::blocking::Client::new();
-
-    println!("{}", "Asking AI...".bright_black());
-
-    let start = std::time::Instant::now();
-    let response = client
+    let request_builder = reqwest::Client::new()
         .post("https://api.openai.com/v1/chat/completions")
         .header("Content-Type", "application/json")
-        .header("Authorization", format!("Bearer {api_key}"))
-        .body(json)
-        .send();
+        .bearer_auth(api_key)
+        .body(json);
 
-    match response {
-        Ok(response) => {
-            if response.status() == reqwest::StatusCode::OK {
-                let body = match response.text() {
-                    Ok(body) => body,
-                    Err(e) => {
-                        println!("{e}");
-                        process::exit(1);
-                    }
-                };
-                let resp = match serde_json::from_str::<openai::Response>(&body) {
-                    Ok(resp) => resp,
-                    Err(e) => {
-                        println!("error parsing response: {e}\n {body:?}");
-                        process::exit(1);
-                    }
-                };
-                let duration = start.elapsed();
-                println!(
-                    "{} {}",
-                    "request took".bright_black(),
-                    format!("{}.{:03}s", duration.as_secs(), duration.subsec_millis()).purple()
-                );
-                println!(
-                    "This used {} tokens {}, costing you ~{}$",
-                    format!("{}", resp.usage.total_tokens).purple(),
-                    format!(
-                        "({} for prompt, {} for completion)",
-                        resp.usage.prompt_tokens, resp.usage.completion_tokens
-                    )
-                    .bright_black(),
-                    format!(
-                        "{:0.5}",
-                        config
-                            .model
-                            .cost(resp.usage.prompt_tokens, resp.usage.total_tokens)
-                    )
-                    .purple()
-                );
-                for (i, choice) in resp.choices.iter().enumerate() {
-                    println!(
-                        "\n{}",
-                        format!("[{}]============================", i.to_string().purple())
-                            .bright_black()
-                    );
-                    println!("{}", choice.message.content);
+    let loading_ai_animation = tokio::spawn(async {
+        let emoji_support =
+            terminal_supports_emoji::supports_emoji(terminal_supports_emoji::Stream::Stdout);
+        let frames = if emoji_support {
+            vec![
+                "🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚",
+            ]
+        } else {
+            vec!["/", "-", "\\", "|"]
+        };
+        let mut current_frame = 0;
+        let mut stdout = std::io::stdout();
+        loop {
+            current_frame = (current_frame + 1) % frames.len();
+            match execute!(
+                stdout,
+                Clear(ClearType::CurrentLine),
+                MoveToColumn(0),
+                SetForegroundColor(Color::Yellow),
+                Print("Asking AI ".bright_black()),
+                Print(frames[current_frame]),
+                ResetColor
+            ) {
+                Ok(_) => {}
+                Err(_) => {
+                    break;
                 }
-                println!("{}", "\n================================".bright_black());
-                if resp.choices.len() == 1 {
-                    let answer = match Confirm::new("Do you want to commit with this message? ")
-                        .with_default(true)
-                        .prompt()
-                    {
-                        Ok(answer) => answer,
-                        Err(e) => {
-                            println!("{e}");
-                            process::exit(1);
-                        }
-                    };
-                    if answer {
-                        match git::commit(resp.choices[0].message.content.clone()) {
-                            Ok(_) => {}
-                            Err(e) => {
-                                println!("{e}");
-                                process::exit(1);
-                            }
-                        };
-                        println!("{} 🎉", "Commit successful!".purple());
-                    }
-                    check_version();
-                    process::exit(0);
-                }
-                let max_index = resp.choices.len();
-                let commit_index = match inquire::CustomType::<usize>::new(&format!(
-                    "Which commit message do you want to use? {}",
-                    "<ESC> to cancel".bright_black()
-                ))
-                .with_validator(move |i: &usize| {
-                    if *i >= max_index {
-                        Err(CustomUserError::from("Invalid index"))
-                    } else {
-                        Ok(Validation::Valid)
-                    }
-                })
-                .prompt()
-                {
-                    Ok(i) => i,
-                    Err(e) => {
-                        println!("{e}");
-                        process::exit(1);
-                    }
-                };
-                let commit_msg = resp.choices[commit_index].message.content.clone();
-                match git::commit(commit_msg) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("{e}");
-                        process::exit(1);
-                    }
-                };
-                println!("{} 🎉", "Commit successful!".purple());
-                check_version();
-            } else {
-                let e = match response.text() {
-                    Ok(e) => e,
-                    Err(e) => {
-                        println!("{e}");
-                        process::exit(1);
-                    }
-                };
-                let error = match serde_json::from_str::<openai::ErrorRoot>(&e) {
-                    Ok(error) => error.error,
-                    Err(e) => {
-                        println!("{e}");
-                        process::exit(1);
-                    }
-                };
-                println!("{error}");
             }
+            tokio::time::sleep(Duration::from_millis(150)).await;
         }
+    });
+
+    let mut choices = vec![String::from(""); options.n as usize];
+
+    let term_width = terminal::size()?.0 as usize;
+    let term_height = terminal::size()?.1 as usize;
+
+    let mut stdout = std::io::stdout();
+
+    let mut es = EventSource::new(request_builder)?;
+    let mut lines_to_move_up = 0;
+    let mut response_tokens = 0;
+    while let Some(event) = es.next().await {
+        if !loading_ai_animation.is_finished() {
+            loading_ai_animation.abort();
+            execute!(
+                std::io::stdout(),
+                Clear(ClearType::CurrentLine),
+                MoveToColumn(0),
+            )?;
+            print!("\n\n")
+        }
+        execute!(stdout, MoveToPreviousLine(lines_to_move_up),)?;
+        lines_to_move_up = 0;
+        match event {
+            Ok(Event::Message(message)) => {
+                if message.data == "[DONE]" {
+                    break;
+                }
+                execute!(stdout, Clear(ClearType::FromCursorDown),)?;
+                let resp = serde_json::from_str::<openai::Response>(&message.data)
+                    .map_or_else(|_| openai::Response::default(), |r| r);
+                response_tokens += 1;
+                for choice in resp.choices {
+                    if let Some(content) = choice.delta.content {
+                        choices[choice.index as usize].push_str(&content);
+                    }
+                }
+                for (i, choice) in choices.iter().enumerate() {
+                    let outp = format!(
+                        "{}{}\n{}\n",
+                        if i == 0 {
+                            format!(
+                                "This used {} tokens costing you about {}\n",
+                                format!("~${}", response_tokens + prompt_tokens).purple(),
+                                format!(
+                                    "{:0.4}",
+                                    config.model.cost(prompt_tokens, response_tokens)
+                                )
+                                .purple()
+                            )
+                            .bright_black()
+                        } else {
+                            "".bright_black()
+                        },
+                        format!("[{}]====================", format!("{i}").purple()).bright_black(),
+                        choice,
+                    );
+                    print!("{outp}");
+                    lines_to_move_up += count_lines(&outp, term_width) - 1;
+                }
+            }
+            Err(_) => {}
+            _ => {}
+        }
+    }
+
+    execute!(
+        stdout,
+        MoveTo(0, term_height as u16),
+        Print(format!("{}\n", "=======================".bright_black())),
+    )?;
+
+    if choices.len() == 1 {
+        let answer = match Confirm::new("Do you want to commit with this message? ")
+            .with_default(true)
+            .prompt()
+        {
+            Ok(answer) => answer,
+            Err(e) => {
+                println!("{e}");
+                process::exit(1);
+            }
+        };
+        if answer {
+            match git::commit(choices[0].clone()) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("{e}");
+                    process::exit(1);
+                }
+            };
+            println!("{} 🎉", "Commit successful!".purple());
+        }
+        check_version().await;
+        process::exit(0);
+    }
+    let max_index = choices.len();
+    let commit_index = match inquire::CustomType::<usize>::new(&format!(
+        "Which commit message do you want to use? {}",
+        "<ESC> to cancel".bright_black()
+    ))
+    .with_validator(move |i: &usize| {
+        if *i >= max_index {
+            Err(CustomUserError::from("Invalid index"))
+        } else {
+            Ok(Validation::Valid)
+        }
+    })
+    .prompt()
+    {
+        Ok(i) => i,
         Err(e) => {
             println!("{e}");
             process::exit(1);
         }
-    }
+    };
+    let commit_msg = choices[commit_index].clone();
+    match git::commit(commit_msg) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("{e}");
+            process::exit(1);
+        }
+    };
+    println!("{} 🎉", "Commit successful!".purple());
+    check_version().await;
+
+    Ok(())
 }
 
-fn check_version() -> anyhow::Result<()> {
-    let client = SyncClient::new(
-        "turbocommit latest version",
-        std::time::Duration::from_millis(1000),
-    )?;
-
-    let turbo = client.get_crate("turbocommit")?;
+async fn check_version() {
+    let client = match crates_io_api::AsyncClient::new(
+        "turbocommit lateste version checker",
+        Duration::from_millis(1000),
+    ) {
+        Ok(client) => client,
+        Err(_) => {
+            return;
+        }
+    };
+    let turbo = match client.get_crate("turbocommit").await {
+        Ok(turbo) => turbo,
+        Err(_) => {
+            return;
+        }
+    };
     let newest_version = turbo.versions[0].num.clone();
     let current_version = env!("CARGO_PKG_VERSION");
 
@@ -306,5 +375,31 @@ fn check_version() -> anyhow::Result<()> {
             "cargo install --force turbocommit".purple()
         );
     }
-    Ok(())
+}
+
+#[must_use]
+pub fn count_lines(text: &str, max_width: usize) -> u16 {
+    if text.is_empty() {
+        return 0;
+    }
+    let mut line_count = 0;
+    let mut current_line_width = 0;
+    for character in text.chars() {
+        match character {
+            '\r' => {}
+            '\n' => {
+                line_count += 1;
+                current_line_width = 0;
+            }
+            _ => {
+                current_line_width += 1;
+                if current_line_width > max_width {
+                    line_count += 1;
+                    current_line_width = 1;
+                }
+            }
+        }
+    }
+
+    line_count + 1
 }
