@@ -20,19 +20,19 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn system(content: String) -> Self {
+    pub const fn system(content: String) -> Self {
         Self {
             role: Role::System,
             content,
         }
     }
-    pub fn user(content: String) -> Self {
+    pub const fn user(content: String) -> Self {
         Self {
             role: Role::User,
             content,
         }
     }
-    pub fn assistant(content: String) -> Self {
+    pub const fn assistant(content: String) -> Self {
         Self {
             role: Role::Assistant,
             content,
@@ -75,6 +75,7 @@ pub struct Request {
     pub n: i32,
     pub temperature: f64,
     pub frequency_penalty: f64,
+    stream: bool,
 }
 
 impl Request {
@@ -91,25 +92,32 @@ impl Request {
             n,
             temperature,
             frequency_penalty,
+            stream: true,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Response {
     pub id: String,
     pub object: String,
     pub created: i64,
     pub model: String,
     pub choices: Vec<Choice>,
-    pub usage: Usage,
+    pub usage: Option<Usage>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Choice {
     pub index: i64,
     pub finish_reason: Option<String>,
-    pub message: Message,
+    pub delta: Delta,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Delta {
+    pub role: Option<Role>,
+    pub content: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
