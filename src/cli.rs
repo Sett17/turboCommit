@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::openai;
 use crate::openai::count_token;
 use colored::Colorize;
@@ -14,22 +15,35 @@ pub struct Options {
     pub dry_run: bool,
 }
 
-impl Default for Options {
-    fn default() -> Self {
+// impl Default for Options {
+//     fn default() -> Self {
+//         Self {
+//             n: 1,
+//             msg: String::new(),
+//             t: 1.0,
+//             f: 0.0,
+//             model: openai::Model::default(),
+//             dry_run: false,
+//         }
+//     }
+// }
+
+impl From<&Config> for Options {
+    fn from(config: &Config) -> Self {
         Self {
-            n: 1,
+            n: config.default_number_of_choices,
             msg: String::new(),
-            t: 1.0,
-            f: 0.0,
-            model: openai::Model::default(),
+            t: config.default_temperature,
+            f: config.default_frequency_penalty,
+            model: config.model,
             dry_run: false,
         }
     }
 }
 
 impl Options {
-    pub fn new(args: env::Args) -> Self {
-        let mut opts = Self::default();
+    pub fn new(args: env::Args, conf: &Config) -> Self {
+        let mut opts = Self::from(conf);
         let mut iter = args.skip(1);
         let mut msg = String::new();
 
@@ -144,24 +158,16 @@ fn help() {
 
     println!("\nUsage: turbocommit [options] [message]\n");
     println!("Options:");
-    println!(
-        "  -n <n>   Number of choices to generate (default: {})\n",
-        Options::default().n
-    );
-    println!(
-        "  -m <m>   Model to use (default: {})\n  --model <m>\n",
-        Options::default().model.to_string()
-    );
+    println!("  -n <n>   Number of choices to generate\n",);
+    println!("  -m <m>   Model to use\n  --model <m>\n",);
     println!("  -d       Dry run. Will not ask AI for completions\n  --dry-run\n",);
     println!(
-        "  -t <t>   Temperature (|t| 0.0 < t < 2.0) (default: {:1.1})\n{}\n",
-        Options::default().t,
+        "  -t <t>   Temperature (|t| 0.0 < t < 2.0)\n{}\n",
         "(https://platform.openai.com/docs/api-reference/chat/create#chat/create-temperature)"
             .bright_black()
     );
     println!(
-        "  -f <f>   Frequency penalty (|f| -2.0 < f < 2.0) (default: {:1.1})\n{}\n",
-        Options::default().f,
+        "  -f <f>   Frequency penalty (|f| -2.0 < f < 2.0)\n{}\n",
         "(https://platform.openai.com/docs/api-reference/chat/create#chat/create-frequency-penalty)"
             .bright_black()
     );

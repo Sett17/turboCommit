@@ -1,4 +1,4 @@
-use crate::{cli, openai};
+use crate::openai;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::process;
@@ -93,11 +93,5 @@ impl Config {
             }
         };
         std::fs::write(path, config)
-    }
-    pub fn overwrite(&mut self, opts: &cli::Options) {
-        self.default_number_of_choices = opts.n;
-        self.default_temperature = opts.t;
-        self.default_frequency_penalty = opts.f;
-        self.model = opts.model;
     }
 }

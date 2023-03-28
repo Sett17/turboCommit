@@ -21,8 +21,7 @@ mod openai;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let options = cli::Options::new(env::args());
-    let mut config = Config::load();
+    let config = Config::load();
     match config.save() {
         Ok(_) => (),
         Err(err) => {
@@ -30,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             process::exit(1);
         }
     }
-    config.overwrite(&options);
+    let options = cli::Options::new(env::args(), &config);
 
     let Ok(api_key) = env::var("OPENAI_API_KEY") else {
         println!("{} {}", "OPENAI_API_KEY not set.".red(), "Refer to step 3 here: https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety".bright_black());
@@ -107,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Clear(ClearType::CurrentLine),
         MoveToColumn(0),
     )?;
-    while system_len + extra_len + diff_tokens > config.model.context_size() {
+    while system_len + extra_len + diff_tokens > options.model.context_size() {
         println!(
             "{} {}",
             "The request is too long!".red(),
@@ -148,8 +147,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if options.dry_run {
         println!("This will use ~{} prompt tokens, costing you ~${}.\nEach 1K completion tokens will cost you ~${}",
             format!("{}", system_len + extra_len + diff_tokens).purple(),
-            format!("{:0.5}", config.model.cost(system_len + extra_len + diff_tokens, 0)).purple(),
-            format!("{:0.5}", config.model.cost(0, 1000)).purple());
+            format!("{:0.5}", options.model.cost(system_len + extra_len + diff_tokens, 0)).purple(),
+            format!("{:0.5}", options.model.cost(0, 1000)).purple());
         check_version().await;
         process::exit(0);
     }
@@ -163,7 +162,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let req = openai::Request::new(
-        config.model.clone().to_string(),
+        options.model.clone().to_string(),
         messages,
         options.n,
         options.t,
@@ -261,7 +260,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 format!("{}", response_tokens + prompt_tokens).purple(),
                                 format!(
                                     "~${:0.4}",
-                                    config.model.cost(prompt_tokens, response_tokens)
+                                    options.model.cost(prompt_tokens, response_tokens)
                                 )
                                 .purple()
                             )
