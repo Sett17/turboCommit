@@ -13,6 +13,7 @@ use openai::Message;
 use reqwest_eventsource::{Event, EventSource};
 use std::time::Duration;
 use std::{env, process};
+use unicode_segmentation::UnicodeSegmentation;
 
 mod cli;
 mod config;
@@ -386,10 +387,10 @@ pub fn count_lines(text: &str, max_width: usize) -> u16 {
     }
     let mut line_count = 0;
     let mut current_line_width = 0;
-    for character in text.chars() {
-        match character {
-            '\r' => {}
-            '\n' => {
+    for cluster in UnicodeSegmentation::graphemes(text, true) {
+        match cluster {
+            "\r" | "\u{FEFF}" => {}
+            "\n" => {
                 line_count += 1;
                 current_line_width = 0;
             }
@@ -397,7 +398,7 @@ pub fn count_lines(text: &str, max_width: usize) -> u16 {
                 current_line_width += 1;
                 if current_line_width > max_width {
                     line_count += 1;
-                    current_line_width = 1;
+                    current_line_width = cluster.chars().count();
                 }
             }
         }
