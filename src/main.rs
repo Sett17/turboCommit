@@ -276,7 +276,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     lines_to_move_up += count_lines(&outp, term_width) - 1;
                 }
             }
-            Err(_) => {}
+            Err(e) => {
+                println!("{e}");
+                process::exit(1);
+            }
             _ => {}
         }
     }
