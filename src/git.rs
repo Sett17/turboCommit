@@ -1,4 +1,4 @@
-use git2::Repository;
+use git2::{Repository, Tree};
 use std::process::Command;
 
 pub fn get_repo() -> Result<Repository, git2::Error> {
@@ -7,8 +7,11 @@ pub fn get_repo() -> Result<Repository, git2::Error> {
 
 pub fn staged_files(repo: &Repository) -> Result<Vec<String>, git2::Error> {
     let idx = repo.index()?;
-    let head = repo.head()?.peel_to_tree()?;
-    let diff = repo.diff_tree_to_index(Some(&head), Some(&idx), None)?;
+    let mut head: Option<Tree> = None;
+    if let Ok(h) = repo.head() {
+        head = Some(h.peel_to_tree()?);
+    }
+    let diff = repo.diff_tree_to_index(head.as_ref(), Some(&idx), None)?;
     Ok(diff
         .deltas()
         .map(|d| {
@@ -22,8 +25,11 @@ pub fn diff(repo: &Repository, files: &[String]) -> Result<String, git2::Error> 
     let mut ret = String::new();
 
     let idx = repo.index()?;
-    let head = repo.head()?.peel_to_tree()?;
-    let diff = repo.diff_tree_to_index(Some(&head), Some(&idx), None)?;
+    let mut head: Option<Tree> = None;
+    if let Ok(h) = repo.head() {
+        head = Some(h.peel_to_tree()?);
+    }
+    let diff = repo.diff_tree_to_index(head.as_ref(), Some(&idx), None)?;
     diff.print(git2::DiffFormat::Patch, |delta, _, line| {
         if let Some(path) = delta.new_file().path() {
             if files.contains(&path.to_str().unwrap_or("").to_string()) {
