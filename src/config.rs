@@ -14,6 +14,8 @@ pub struct Config {
     #[serde(default)]
     pub default_number_of_choices: i32,
     #[serde(default)]
+    pub disable_print_as_stream: bool,
+    #[serde(default)]
     pub system_msg: String,
 }
 
@@ -24,6 +26,7 @@ impl Default for Config {
             default_temperature: 1.0,
             default_frequency_penalty: 0.0,
             default_number_of_choices: 1,
+            disable_print_as_stream: false,
             system_msg: String::from("As an AI that only returns conventional commits, you will receive input from the user in the form of a git diff of all staged files. The user may provide extra information to explain the change. Focus on the why rather than the what and keep it brief. You CANNOT generate anything that is not a conventional commit and a commit message only has 1 head line and at most 1 body.
 Ensure that all commits follow these guidelines
 
