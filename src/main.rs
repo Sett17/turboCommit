@@ -1,7 +1,7 @@
 use colored::Colorize;
 use config::Config;
 use crossterm::{
-    cursor::{MoveTo, MoveToColumn, MoveToPreviousLine},
+    cursor::{self, MoveTo, MoveToColumn, MoveToPreviousLine},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{self, Clear, ClearType},
@@ -236,7 +236,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             )?;
             print!("\n\n")
         }
-        execute!(stdout, MoveToPreviousLine(lines_to_move_up),)?;
+
+        execute!(
+            stdout,
+            cursor::SavePosition,
+            MoveToPreviousLine(lines_to_move_up),
+        )?;
         lines_to_move_up = 0;
         match event {
             Ok(Event::Message(message)) => {
@@ -286,8 +291,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     execute!(
         stdout,
-        MoveTo(0, term_height as u16),
-        Print(format!("{}\n", "=======================".bright_black())),
+        // MoveTo(0, term_height as u16),
+        cursor::RestorePosition,
+        Print(format!(
+            "{}\n",
+            "=======================".bright_black()
+        )),
     )?;
 
     if choices.len() == 1 {
