@@ -253,6 +253,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 for (i, choice) in choices.iter().enumerate() {
+                    let augmented_choice = augment_message(choice, &options.augment);
                     let outp = format!(
                         "{}{}\n{}\n",
                         if i == 0 {
@@ -270,7 +271,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             "".bright_black()
                         },
                         format!("[{}]====================", format!("{i}").purple()).bright_black(),
-                        choice,
+                        augmented_choice,
                     );
                     print!("{outp}");
                     lines_to_move_up += count_lines(&outp, term_width) - 1;
@@ -405,4 +406,26 @@ pub fn count_lines(text: &str, max_width: usize) -> u16 {
     }
 
     line_count + 1
+}
+
+#[must_use]
+fn augment_message(msg: &str, aug: &str) -> String {
+    let mut ret = String::new();
+
+    if let Some(first_line) = msg.lines().next() {
+        ret.push_str(first_line);
+        ret.push_str("\n");
+    }
+    ret.push_str(aug);
+    ret.push_str("\n");
+
+    for line in msg.lines().skip(1) {
+        if line.is_empty() {
+            continue;
+        }
+        ret.push_str(line);
+        ret.push_str("\n");
+    }
+
+    String::from(ret.trim())
 }

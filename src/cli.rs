@@ -12,6 +12,7 @@ pub struct Options {
     pub t: f64,
     pub f: f64,
     pub model: openai::Model,
+    pub augment: String,
     pub dry_run: bool,
 }
 
@@ -23,6 +24,7 @@ impl From<&Config> for Options {
             t: config.default_temperature,
             f: config.default_frequency_penalty,
             model: config.model,
+            augment: String::new(),
             dry_run: false,
         }
     }
@@ -96,6 +98,12 @@ impl Options {
                         };
                     }
                 }
+                "-a" | "--augment" => {
+                    if let Some(augment) = iter.next() {
+                        opts.augment.push_str("\n");
+                        opts.augment.push_str(&augment);
+                    }
+                }
                 "-d" | "--dry-run" => {
                     opts.dry_run = true;
                     println!(
@@ -147,6 +155,7 @@ fn help() {
     println!("Options:");
     println!("  -n <n>   Number of choices to generate\n",);
     println!("  -m <m>   Model to use\n  --model <m>\n",);
+    println!("  -a <a>   Augment Message with string before the body\n  --augment <a>\n",);
     println!("  -d       Dry run. Will not ask AI for completions\n  --dry-run\n",);
     println!(
         "  -t <t>   Temperature (|t| 0.0 < t < 2.0)\n{}\n",
