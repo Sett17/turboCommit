@@ -21,13 +21,14 @@ Please note that in order to use turbocommit, you will need to set the `OPENAI_A
 ### Generating Conventional Commits with `turbocommit`
 
 <!-- START TABLE HERE -->
-| Short | Long      | Description                              |    Default    |
-| ----- | --------- | ---------------------------------------- | :-----------: |
-| -n    |           | Number of choices to generate            |       1       |
-| -m    | --model   | Model to use                             | gpt-3.5-turbo |
-| -d    | --dry-run | Dry run. Will not ask AI for completions |               |
-| -t    |           | Temperature (t \|0.0 < t < 2.0\|)        |      1.0      |
-| -f    |           | Frequency penalty (f \|-2.0 < f < 2.0\|) |      0.0      |
+| Short | Long         | Description                                 |    Default    |
+| ----- | ------------ | ------------------------------------------- | :-----------: |
+| -n    |              | Number of choices to generate               |       1       |
+| -m    | --model      | Model to use                                | gpt-3.5-turbo |
+| -d    | --dry-run    | Dry run. Will not ask AI for completions    |               |
+| -p    | --print-once | Will not print tokens as they are generated |               |
+| -t    |              | Temperature (t \|0.0 < t < 2.0\|)           |      1.0      |
+| -f    |              | Frequency penalty (f \|-2.0 < f < 2.0\|)    |      0.0      |
 <!-- END TABLE HERE -->
 
 ### Handling Long `git diff`

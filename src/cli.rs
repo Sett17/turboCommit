@@ -11,6 +11,7 @@ pub struct Options {
     pub msg: String,
     pub t: f64,
     pub f: f64,
+    pub print_once: bool,
     pub model: openai::Model,
     pub dry_run: bool,
 }
@@ -22,6 +23,7 @@ impl From<&Config> for Options {
             msg: String::new(),
             t: config.default_temperature,
             f: config.default_frequency_penalty,
+            print_once: config.disable_print_as_stream,
             model: config.model,
             dry_run: false,
         }
@@ -80,6 +82,9 @@ impl Options {
                             |f: f64| f.clamp(-2.0, 2.0),
                         );
                     }
+                }
+                "-p" | "--print-once" => {
+                    opts.print_once = true;
                 }
                 "-m" | "--model" => {
                     if let Some(model) = iter.next() {
@@ -148,6 +153,7 @@ fn help() {
     println!("  -n <n>   Number of choices to generate\n",);
     println!("  -m <m>   Model to use\n  --model <m>\n",);
     println!("  -d       Dry run. Will not ask AI for completions\n  --dry-run\n",);
+    println!("  -p       Will not print tokens as they are generated.\n  --print-once \n",);
     println!(
         "  -t <t>   Temperature (|t| 0.0 < t < 2.0)\n{}\n",
         "(https://platform.openai.com/docs/api-reference/chat/create#chat/create-temperature)"
@@ -159,7 +165,7 @@ fn help() {
             .bright_black()
     );
     println!("Anything else will be concatenated into an extra message given to the AI\n");
-    println!("You can change the default for these options and the system message prompt in the config file, that is created the first time running the program\n{}",
+    println!("You can change the defaults for these options and the system message prompt in the config file, that is created the first time running the program\n{}",
         home::home_dir().unwrap_or_else(|| "".into()).join(".turbocommit.yaml").display());
     println!("To go back to the default system message, delete the config file.\n");
     println!(
