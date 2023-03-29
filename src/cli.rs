@@ -15,19 +15,6 @@ pub struct Options {
     pub dry_run: bool,
 }
 
-// impl Default for Options {
-//     fn default() -> Self {
-//         Self {
-//             n: 1,
-//             msg: String::new(),
-//             t: 1.0,
-//             f: 0.0,
-//             model: openai::Model::default(),
-//             dry_run: false,
-//         }
-//     }
-// }
-
 impl From<&Config> for Options {
     fn from(config: &Config) -> Self {
         Self {
