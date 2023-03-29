@@ -417,15 +417,14 @@ fn augment_message(msg: &str, aug: &str) -> String {
         ret.push_str("\n");
     }
     ret.push_str(aug);
-    ret.push_str("\n");
 
     for line in msg.lines().skip(1) {
         if line.is_empty() {
             continue;
         }
-        ret.push_str(line);
         ret.push_str("\n");
+        ret.push_str(line);
     }
 
-    String::from(ret.trim())
+    ret
 }
