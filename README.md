@@ -20,49 +20,15 @@ Please note that in order to use turbocommit, you will need to set the `OPENAI_A
 
 ### Generating Conventional Commits with `turbocommit`
 
-To use `turbocommit`, simply run the command `turbocommit` in your terminal.
-
-```bash
-$ turbocommit
-```
-
-This will generate one choice for the commit message and ask you whether you want to commit with it. You can then choose to commit with the generated message or not.
-
-![turbocommit example](simple.png)
-
----
-
-You can also pass in extra information to the AI to influence the generated commit message. Simply add the information as an argument to the command.
-
-```bash
-$ turbocommit this is extra information
-```
-
-This will pass the extra information to the AI to generate the commit message.
-
----
-
-Additionally, you can generate multiple choices for the commit message by using the `-n` option followed by the number of choices you want to generate.
-
-```bash
-$ turbocommit -n 3
-```
-
-This will generate three choices from which you can choose which one to commit with.
-
-![turbocommit example with multiple choices](n.png)
-
-You can also pass in extra information to the AI to influence the generation of multiple choices by adding it as an argument.
-
-
-
-```bash
-$ turbocommit -n 2 make it sound like a pirate
-````
-
-This will generate three choices and pass the extra information to the AI to generate the commit messages.
-
-![turbocommit example with multiple choices and extra information](pirate.png)
+<!-- START TABLE HERE -->
+| Short | Long      | Description                              |    Default    |
+| ----- | --------- | ---------------------------------------- | :-----------: |
+| -n    |           | Number of choices to generate            |       1       |
+| -m    | --model   | Model to use                             | gpt-3.5-turbo |
+| -d    | --dry-run | Dry run. Will not ask AI for completions |               |
+| -t    |           | Temperature (t \|0.0 < t < 2.0\|)        |      1.0      |
+| -f    |           | Frequency penalty (f \|-2.0 < f < 2.0\|) |      0.0      |
+<!-- END TABLE HERE -->
 
 ### Handling Long `git diff`
 
