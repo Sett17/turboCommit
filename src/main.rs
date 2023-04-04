@@ -1,7 +1,7 @@
 use colored::Colorize;
 use config::Config;
 use crossterm::{
-    cursor::{self, MoveTo, MoveToColumn, MoveToPreviousLine},
+    cursor::{self, MoveToColumn, MoveToPreviousLine},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{self, Clear, ClearType},
@@ -219,7 +219,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut choices = vec![String::from(""); options.n as usize];
 
     let term_width = terminal::size()?.0 as usize;
-    let term_height = terminal::size()?.1 as usize;
 
     let mut stdout = std::io::stdout();
 
@@ -340,10 +339,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         stdout,
         // MoveTo(0, term_height as u16),
         cursor::RestorePosition,
-        Print(format!(
-            "{}\n",
-            "=======================".bright_black()
-        )),
+        Print(format!("{}\n", "=======================".bright_black())),
     )?;
 
     if choices.len() == 1 {
