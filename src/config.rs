@@ -5,10 +5,15 @@ use std::process;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
+    #[serde(default)]
     pub model: openai::Model,
+    #[serde(default)]
     pub default_temperature: f64,
+    #[serde(default)]
     pub default_frequency_penalty: f64,
+    #[serde(default)]
     pub default_number_of_choices: i32,
+    #[serde(default)]
     pub system_msg: String,
 }
 
