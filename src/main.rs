@@ -1,7 +1,7 @@
 use colored::Colorize;
 use config::Config;
 use crossterm::{
-    cursor::{self, MoveToColumn, MoveToPreviousLine},
+    cursor::{MoveToColumn, MoveToPreviousLine},
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{self, Clear, ClearType},
@@ -319,14 +319,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if options.print_once {
-        // if !loading_ai_animation.is_finished() {
-        //     loading_ai_animation.abort();
-        //     execute!(
-        //         std::io::stdout(),
-        //         Clear(ClearType::CurrentLine),
-        //         MoveToColumn(0),
-        //     )?;
-        // }
         println!(
             "This used {} tokens costing you about {}\n",
             format!("{}", response_tokens + prompt_tokens).purple(),
@@ -347,7 +339,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     execute!(
         stdout,
-        // MoveTo(0, term_height as u16),
         Print(format!("{}\n", "=======================".bright_black())),
     )?;
 
