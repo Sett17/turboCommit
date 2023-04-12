@@ -37,7 +37,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         process::exit(1);
     };
 
-    let loading_git_animation = tokio::spawn(async {
+    let no_git_anim = options.print_once;
+    let loading_git_animation = tokio::spawn(async move {
+        if no_git_anim {
+            println!("{}", "Extracting Information...".bright_black());
+            return;
+        }
         let emoji_support =
             terminal_supports_emoji::supports_emoji(terminal_supports_emoji::Stream::Stdout);
         let frames = if emoji_support {
@@ -184,7 +189,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .bearer_auth(api_key)
         .body(json);
 
-    let loading_ai_animation = tokio::spawn(async {
+    let no_ai_anim = options.print_once;
+    let loading_ai_animation = tokio::spawn(async move {
+        if no_ai_anim {
+            println!("{}", "Asking AI...".bright_black());
+            return;
+        }
         let emoji_support =
             terminal_supports_emoji::supports_emoji(terminal_supports_emoji::Stream::Stdout);
         let frames = if emoji_support {
@@ -309,14 +319,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if options.print_once {
-        if !loading_ai_animation.is_finished() {
-            loading_ai_animation.abort();
-            execute!(
-                std::io::stdout(),
-                Clear(ClearType::CurrentLine),
-                MoveToColumn(0),
-            )?;
-        }
+        // if !loading_ai_animation.is_finished() {
+        //     loading_ai_animation.abort();
+        //     execute!(
+        //         std::io::stdout(),
+        //         Clear(ClearType::CurrentLine),
+        //         MoveToColumn(0),
+        //     )?;
+        // }
         println!(
             "This used {} tokens costing you about {}\n",
             format!("{}", response_tokens + prompt_tokens).purple(),
@@ -338,7 +348,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     execute!(
         stdout,
         // MoveTo(0, term_height as u16),
-        cursor::RestorePosition,
         Print(format!("{}\n", "=======================".bright_black())),
     )?;
 
