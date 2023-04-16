@@ -268,13 +268,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )?;
                 print!("\n\n")
             }
-            execute!(stdout, MoveToPreviousLine(lines_to_move_up),)?;
-            lines_to_move_up = 0;
             match event {
                 Ok(Event::Message(message)) => {
                     if message.data == "[DONE]" {
                         break;
                     }
+                    execute!(stdout, MoveToPreviousLine(lines_to_move_up),)?;
+                    lines_to_move_up = 0;
                     execute!(stdout, Clear(ClearType::FromCursorDown),)?;
                     let resp = serde_json::from_str::<openai::Response>(&message.data)
                         .map_or_else(|_| openai::Response::default(), |r| r);
