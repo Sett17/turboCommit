@@ -7,7 +7,7 @@ use crossterm::{
     terminal::{self, Clear, ClearType},
 };
 use futures::stream::StreamExt;
-use inquire::{validator::Validation, Confirm, CustomUserError, MultiSelect};
+use inquire::{validator::Validation, Confirm, CustomUserError, MultiSelect, Select};
 use openai::Message;
 
 use reqwest_eventsource::{Event, EventSource};
@@ -342,19 +342,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Print(format!("{}\n", "=======================".bright_black())),
     )?;
 
+    let mut chosen_message = String::new();
+
     if choices.len() == 1 {
-        let answer = match Confirm::new("Do you want to commit with this message? ")
-            .with_default(true)
-            .prompt()
-        {
-            Ok(answer) => answer,
-            Err(e) => {
-                println!("{e}");
-                process::exit(1);
+        chosen_message = choices[0].clone();
+    } else {
+        let max_index = choices.len();
+        let commit_index = inquire::CustomType::<usize>::new(&format!(
+            "Which commit message do you want to use? {}",
+            "<ESC> to cancel".bright_black()
+        ))
+        .with_validator(move |i: &usize| {
+            if *i >= max_index {
+                Err(CustomUserError::from("Invalid index"))
+            } else {
+                Ok(Validation::Valid)
             }
-        };
-        if answer {
-            match git::commit(choices[0].clone()) {
+        })
+        .prompt()?;
+        chosen_message = choices[commit_index].clone();
+    }
+
+    let tasks = vec!["Commit it", "Edit it & Commit", "Abort"];
+
+    let task = Select::new("What to do with the message?", tasks).prompt()?;
+
+    match task {
+        "Commit it" => {
+            match git::commit(chosen_message) {
                 Ok(_) => {}
                 Err(e) => {
                     println!("{e}");
@@ -363,38 +378,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             println!("{} 🎉", "Commit successful!".purple());
         }
-        check_version().await;
-        process::exit(0);
+        "Edit it & Commit" => {
+            let edited = edit::edit(chosen_message)?;
+            execute!(
+                stdout,
+                Print(format!(
+                    "{}\n",
+                    format!("[{}]=======", "Edited Message".purple()).bright_black()
+                )),
+                Print(&edited),
+                Print(format!("{}\n", "=======================".bright_black())),
+            )?;
+            let do_commit = Confirm::new("Do you want to commit with this message? ")
+                .with_default(true)
+                .prompt()?;
+            if do_commit {
+                match git::commit(edited) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("{e}");
+                        process::exit(1);
+                    }
+                };
+                println!("{} 🎉", "Commit successful!".purple());
+            }
+        }
+        _ => {
+            process::exit(0);
+        }
     }
-    let max_index = choices.len();
-    let commit_index = match inquire::CustomType::<usize>::new(&format!(
-        "Which commit message do you want to use? {}",
-        "<ESC> to cancel".bright_black()
-    ))
-    .with_validator(move |i: &usize| {
-        if *i >= max_index {
-            Err(CustomUserError::from("Invalid index"))
-        } else {
-            Ok(Validation::Valid)
-        }
-    })
-    .prompt()
-    {
-        Ok(i) => i,
-        Err(e) => {
-            println!("{e}");
-            process::exit(1);
-        }
-    };
-    let commit_msg = choices[commit_index].clone();
-    match git::commit(commit_msg) {
-        Ok(_) => {}
-        Err(e) => {
-            println!("{e}");
-            process::exit(1);
-        }
-    };
-    println!("{} 🎉", "Commit successful!".purple());
     check_version().await;
 
     Ok(())
