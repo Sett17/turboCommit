@@ -164,7 +164,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut messages = vec![Message::system(config.system_msg), Message::user(diff)];
 
     if !options.msg.is_empty() {
-        messages.push(Message::user(options.msg));
+        let s = format!("Extra explanation: {}", options.msg);
+        messages.push(Message::user(s));
     }
 
     let req = openai::Request::new(
