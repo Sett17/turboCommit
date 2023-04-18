@@ -131,7 +131,10 @@ impl Options {
                 }
             }
         }
-        opts.msg = msg.trim().to_string();
+        msg = String::from(msg.trim());
+        if msg.is_empty() {
+            opts.msg = format!("User explanation: {} ", msg);
+        }
         opts
     }
 }
@@ -175,7 +178,7 @@ fn help() {
         "\nThe system message is about ~{} tokens long",
         format!(
             "{}",
-            count_token(&crate::config::Config::default().system_msg).unwrap_or(0)
+            count_token(&crate::config::Config::load().system_msg).unwrap_or(0)
         )
         .green()
     );
