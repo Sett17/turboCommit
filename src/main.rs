@@ -15,10 +15,43 @@ use std::time::Duration;
 use std::{env, process};
 use unicode_segmentation::UnicodeSegmentation;
 
+mod animation;
 mod cli;
 mod config;
 mod git;
 mod openai;
+
+// #[tokio::main]
+// async fn main() -> Result<(), Box<dyn Error>> {
+//     let config = Config::load();
+//     save_config(&config)?;
+
+//     let options = cli::Options::new(env::args(), &config);
+//     let api_key = get_api_key()?;
+
+//     let (repo, staged_files, full_diff) = get_repo_diff_and_check_empty(&options).await?;
+
+//     let (system_len, extra_len, diff_tokens, diff) =
+//         get_lengths_and_check_size(&config, &options, &repo, staged_files, full_diff).await?;
+
+//     if options.dry_run {
+//         print_dry_run_info(&options, system_len, extra_len, diff_tokens);
+//         check_version().await;
+//         process::exit(0);
+//     }
+
+//     let req = create_openai_request(&config, &options, &diff);
+
+//     let choices = get_ai_choices(&options, &api_key, req).await?;
+
+//     let chosen_message = select_chosen_message(choices);
+
+//     handle_user_action(chosen_message).await?;
+
+//     check_version().await;
+
+//     Ok(())
+// }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -38,41 +71,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let no_git_anim = options.print_once;
-    let loading_git_animation = tokio::spawn(async move {
-        if no_git_anim {
-            println!("{}", "Extracting Information...".bright_black());
-            return;
-        }
-        let emoji_support =
-            terminal_supports_emoji::supports_emoji(terminal_supports_emoji::Stream::Stdout);
-        let frames = if emoji_support {
-            vec![
-                "🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚",
-            ]
-        } else {
-            vec!["/", "-", "\\", "|"]
-        };
-        let mut current_frame = 0;
-        let mut stdout = std::io::stdout();
-        loop {
-            current_frame = (current_frame + 1) % frames.len();
-            match execute!(
-                stdout,
-                Clear(ClearType::CurrentLine),
-                MoveToColumn(0),
-                SetForegroundColor(Color::Yellow),
-                Print("Extracting Information ".bright_black()),
-                Print(frames[current_frame]),
-                ResetColor
-            ) {
-                Ok(_) => (),
-                Err(_) => {
-                    break;
-                }
-            }
-            tokio::time::sleep(Duration::from_millis(150)).await;
-        }
-    });
+    let loading_git_animation = animation::start(
+        String::from("Extracting Information"),
+        no_git_anim,
+        std::io::stdout(),
+    )
+    .await;
 
     let repo = git::get_repo()?;
     let staged_files = git::staged_files(&repo)?;
@@ -191,41 +195,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .body(json);
 
     let no_ai_anim = options.print_once;
-    let loading_ai_animation = tokio::spawn(async move {
-        if no_ai_anim {
-            println!("{}", "Asking AI...".bright_black());
-            return;
-        }
-        let emoji_support =
-            terminal_supports_emoji::supports_emoji(terminal_supports_emoji::Stream::Stdout);
-        let frames = if emoji_support {
-            vec![
-                "🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚",
-            ]
-        } else {
-            vec!["/", "-", "\\", "|"]
-        };
-        let mut current_frame = 0;
-        let mut stdout = std::io::stdout();
-        loop {
-            current_frame = (current_frame + 1) % frames.len();
-            match execute!(
-                stdout,
-                Clear(ClearType::CurrentLine),
-                MoveToColumn(0),
-                SetForegroundColor(Color::Yellow),
-                Print("Asking AI ".bright_black()),
-                Print(frames[current_frame]),
-                ResetColor
-            ) {
-                Ok(_) => {}
-                Err(_) => {
-                    break;
-                }
-            }
-            tokio::time::sleep(Duration::from_millis(150)).await;
-        }
-    });
+    let loading_ai_animation =
+        animation::start(String::from("Asking AI..."), no_ai_anim, std::io::stdout()).await;
 
     let mut choices = vec![String::from(""); options.n as usize];
 
