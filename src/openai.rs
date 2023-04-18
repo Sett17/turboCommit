@@ -1,9 +1,18 @@
 #![allow(dead_code)]
 
 use colored::Colorize;
+use crossterm::cursor::{MoveToColumn, MoveToPreviousLine};
+use crossterm::style::Print;
+use crossterm::terminal::{Clear, ClearType};
+use crossterm::{execute, terminal};
+use futures::StreamExt;
+use reqwest_eventsource::{Event, EventSource};
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use std::str::FromStr;
+use std::{fmt, process};
+
+use crate::animation;
+use crate::util::count_lines;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "lowercase")]
@@ -94,6 +103,139 @@ impl Request {
             frequency_penalty,
             stream: true,
         }
+    }
+
+    pub async fn execute(
+        &self,
+        api_key: String,
+        no_animations: bool,
+        model: Model,
+        prompt_tokens: usize,
+    ) -> anyhow::Result<Vec<String>> {
+        let choices = vec![String::new(); self.n as usize];
+
+        let loading_ai_animation =
+            animation::start(String::from("Asking AI..."), no_ai_anim, std::io::stdout()).await;
+
+        let json = serde_json::to_string(self)?;
+
+        let request_builder = reqwest::Client::new()
+            .post("https://api.openai.com/v1/chat/completions")
+            .header("Content-Type", "application/json")
+            .bearer_auth(api_key)
+            .body(json);
+
+        let term_width = terminal::size()?.0 as usize;
+
+        let mut stdout = std::io::stdout();
+
+        let mut es = EventSource::new(request_builder)?;
+        let mut lines_to_move_up = 0;
+        let mut response_tokens = 0;
+
+        while let Some(event) = es.next().await {
+            if no_animations {
+                match event {
+                    Ok(Event::Message(message)) => {
+                        if message.data == "[DONE]" {
+                            break;
+                        }
+                        let resp = serde_json::from_str::<Response>(&message.data)
+                            .map_or_else(|_| Response::default(), |r| r);
+                        response_tokens += 1;
+                        for choice in resp.choices {
+                            if let Some(content) = choice.delta.content {
+                                choices[choice.index as usize].push_str(&content);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("{e}");
+                        process::exit(1);
+                    }
+                    _ => {}
+                }
+            } else {
+                if !loading_ai_animation.is_finished() {
+                    loading_ai_animation.abort();
+                    execute!(
+                        std::io::stdout(),
+                        Clear(ClearType::CurrentLine),
+                        MoveToColumn(0),
+                    )?;
+                    print!("\n\n")
+                }
+                match event {
+                    Ok(Event::Message(message)) => {
+                        if message.data == "[DONE]" {
+                            break;
+                        }
+                        execute!(stdout, MoveToPreviousLine(lines_to_move_up),)?;
+                        lines_to_move_up = 0;
+                        execute!(stdout, Clear(ClearType::FromCursorDown),)?;
+                        let resp = serde_json::from_str::<Response>(&message.data)
+                            .map_or_else(|_| Response::default(), |r| r);
+                        response_tokens += 1;
+                        for choice in resp.choices {
+                            if let Some(content) = choice.delta.content {
+                                choices[choice.index as usize].push_str(&content);
+                            }
+                        }
+                        for (i, choice) in choices.iter().enumerate() {
+                            let outp = format!(
+                                "{}{}\n{}\n",
+                                if i == 0 {
+                                    format!(
+                                        "This used {} tokens costing you about {}\n",
+                                        format!("{}", response_tokens + prompt_tokens).purple(),
+                                        format!(
+                                            "~${:0.4}",
+                                            model.cost(prompt_tokens, response_tokens)
+                                        )
+                                        .purple()
+                                    )
+                                    .bright_black()
+                                } else {
+                                    "".bright_black()
+                                },
+                                format!("[{}]====================", format!("{i}").purple())
+                                    .bright_black(),
+                                choice,
+                            );
+                            print!("{outp}");
+                            lines_to_move_up += count_lines(&outp, term_width) - 1;
+                        }
+                    }
+                    Err(e) => {
+                        println!("{e}");
+                        process::exit(1);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if no_animations {
+            println!(
+                "This used {} tokens costing you about {}\n",
+                format!("{}", response_tokens + prompt_tokens).purple(),
+                format!("~${:0.4}", model.cost(prompt_tokens, response_tokens)).purple()
+            );
+            for (i, choice) in choices.iter().enumerate() {
+                println!(
+                    "[{}]====================\n{}\n",
+                    format!("{i}").purple(),
+                    choice
+                );
+            }
+        }
+
+        execute!(
+            stdout,
+            Print(format!("{}\n", "=======================".bright_black())),
+        )?;
+
+        Ok(choices)
     }
 }
 

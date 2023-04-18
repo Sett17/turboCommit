@@ -131,7 +131,10 @@ impl Options {
                 }
             }
         }
-        opts.msg = msg.trim().to_string();
+        msg = String::from(msg.trim());
+        if msg.is_empty() {
+            opts.msg = format!("User explanation: {} ", msg);
+        }
         opts
     }
 }
