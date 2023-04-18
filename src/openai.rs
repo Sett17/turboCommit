@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
     System,
@@ -13,7 +13,7 @@ pub enum Role {
     Assistant,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Message {
     pub role: Role,
     pub content: String,
@@ -133,7 +133,7 @@ pub fn count_token(s: &str) -> anyhow::Result<usize> {
     Ok(tokens.len())
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, PartialEq)]
 pub enum Model {
     #[default]
     Gpt35Turbo,
@@ -201,5 +201,93 @@ impl Model {
             Self::Gpt4 => 8192,
             Self::Gpt432k => 32768,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_role_enum() {
+        assert_eq!(serde_json::to_string(&Role::System).unwrap(), "\"system\"");
+        assert_eq!(serde_json::to_string(&Role::User).unwrap(), "\"user\"");
+        assert_eq!(
+            serde_json::to_string(&Role::Assistant).unwrap(),
+            "\"assistant\""
+        );
+    }
+
+    #[test]
+    fn test_message_struct() {
+        let system_message = Message::system("Test system message".to_string());
+        let user_message = Message::user("Test user message".to_string());
+        let assistant_message = Message::assistant("Test assistant message".to_string());
+
+        assert_eq!(system_message.role, Role::System);
+        assert_eq!(system_message.content, "Test system message");
+
+        assert_eq!(user_message.role, Role::User);
+        assert_eq!(user_message.content, "Test user message");
+
+        assert_eq!(assistant_message.role, Role::Assistant);
+        assert_eq!(assistant_message.content, "Test assistant message");
+    }
+
+    #[test]
+    fn test_request_new() {
+        let messages = vec![
+            Message::system("Test system message".to_string()),
+            Message::user("Test user message".to_string()),
+        ];
+
+        let request = Request::new("gpt-3.5-turbo".to_string(), messages.clone(), 1, 0.8, 0.5);
+
+        assert_eq!(request.model, "gpt-3.5-turbo");
+        assert_eq!(request.messages, messages);
+        assert_eq!(request.n, 1);
+        assert_eq!(request.temperature, 0.8);
+        assert_eq!(request.frequency_penalty, 0.5);
+        assert_eq!(request.stream, true);
+    }
+
+    #[test]
+    fn test_model_from_str_and_to_string() {
+        let gpt35_turbo = Model::from_str("gpt-3.5-turbo").unwrap();
+        let gpt4 = Model::from_str("gpt-4").unwrap();
+        let gpt432k = Model::from_str("gpt-4-32k").unwrap();
+
+        assert_eq!(gpt35_turbo.to_string(), "gpt-3.5-turbo");
+        assert_eq!(gpt4.to_string(), "gpt-4");
+        assert_eq!(gpt432k.to_string(), "gpt-4-32k");
+    }
+
+    #[test]
+    fn test_model_cost() {
+        let gpt35_turbo = Model::Gpt35Turbo;
+        let gpt4 = Model::Gpt4;
+        let gpt432k = Model::Gpt432k;
+
+        assert_eq!(gpt35_turbo.cost(1000, 1000), 0.004);
+        assert_eq!(gpt4.cost(1000, 1000), 0.09);
+        assert_eq!(gpt432k.cost(1000, 1000), 0.18);
+    }
+
+    #[test]
+    fn test_model_context_size() {
+        let gpt35_turbo = Model::Gpt35Turbo;
+        let gpt4 = Model::Gpt4;
+        let gpt432k = Model::Gpt432k;
+
+        assert_eq!(gpt35_turbo.context_size(), 4096);
+        assert_eq!(gpt4.context_size(), 8192);
+        assert_eq!(gpt432k.context_size(), 32768);
+    }
+
+    #[test]
+    fn test_count_token() {
+        let test_string = "Large Language Model";
+        let token_count = count_token(test_string).unwrap();
+        assert_eq!(token_count, 3);
     }
 }

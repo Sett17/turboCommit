@@ -31,7 +31,10 @@ impl From<&Config> for Options {
 }
 
 impl Options {
-    pub fn new(args: env::Args, conf: &Config) -> Self {
+    pub fn new<I>(mut args: I, conf: &Config) -> Self
+    where
+        I: Iterator<Item = String>,
+    {
         let mut opts = Self::from(conf);
         let mut iter = args.skip(1);
         let mut msg = String::new();
@@ -177,4 +180,54 @@ fn help() {
         .green()
     );
     process::exit(1);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use std::env;
+
+    #[test]
+    fn test_options_from_config() {
+        let config = Config::default();
+        let options = Options::from(&config);
+
+        assert_eq!(options.n, config.default_number_of_choices);
+        assert_eq!(options.t, config.default_temperature);
+        assert_eq!(options.f, config.default_frequency_penalty);
+        assert_eq!(options.print_once, config.disable_print_as_stream);
+        assert_eq!(options.model, config.model);
+        assert_eq!(options.dry_run, false);
+    }
+
+    #[test]
+    fn test_options_new() {
+        let config = Config::default();
+        let args = vec![
+            "turbocommit",
+            "-n",
+            "3",
+            "-t",
+            "1.0",
+            "-f",
+            "0.5",
+            "--print-once",
+            "--model",
+            "gpt-4",
+            "--dry-run",
+            "test",
+            "commit",
+        ];
+        let args = args.into_iter().map(String::from).collect::<Vec<String>>();
+        let options = Options::new(args.into_iter(), &config);
+
+        assert_eq!(options.n, 3);
+        assert_eq!(options.t, 1.0);
+        assert_eq!(options.f, 0.5);
+        assert_eq!(options.print_once, true);
+        assert_eq!(options.model, openai::Model::Gpt4);
+        assert_eq!(options.dry_run, true);
+        assert_eq!(options.msg, "test commit");
+    }
 }
