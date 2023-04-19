@@ -131,9 +131,8 @@ impl Options {
                 }
             }
         }
-        msg = String::from(msg.trim());
-        if msg.is_empty() {
-            opts.msg = format!("User explanation: {} ", msg);
+        if !msg.is_empty() {
+            opts.msg = format!("User Explanation/Instruction: '{}'", msg);
         }
         opts
     }
