@@ -112,10 +112,10 @@ impl Request {
         model: Model,
         prompt_tokens: usize,
     ) -> anyhow::Result<Vec<String>> {
-        let choices = vec![String::new(); self.n as usize];
+        let mut choices = vec![String::new(); self.n as usize];
 
         let loading_ai_animation =
-            animation::start(String::from("Asking AI..."), no_ai_anim, std::io::stdout()).await;
+            animation::start(String::from("Asking AI..."), no_animations, std::io::stdout()).await;
 
         let json = serde_json::to_string(self)?;
 
