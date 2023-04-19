@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         messages.push(Message::user(options.msg));
     }
 
-    let mut choices = openai::Request::new(
+    let choices = openai::Request::new(
         options.model.clone().to_string(),
         messages,
         options.n,
