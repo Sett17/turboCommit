@@ -23,23 +23,25 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             model: openai::Model::Gpt35Turbo,
-            default_temperature: 1.0,
+            default_temperature: 0.8,
             default_frequency_penalty: 0.0,
-            default_number_of_choices: 1,
+            default_number_of_choices: 2,
             disable_print_as_stream: false,
-            system_msg: String::from("As an AI that only returns conventional commits, you will receive input from the user in the form of a git diff of all staged files. The user may provide extra information to explain the change. Focus on the why rather than the what and keep it brief. You CANNOT generate anything that is not a conventional commit and a commit message only has 1 head line and at most 1 body.
-Ensure that all commits follow these guidelines
+            system_msg: String::from("AI: gen conv commit-msg. Input: git diff staged files, context, user instr. Task: focus purpose, brief, clear. Output: 1 msg (1 headline, ≤1 body) ONLY.
+Commit-msg guidelines:
+1. Start: type (feat, fix, chore, etc.), opt. scope, opt. ! (breaking), req. colon+space.
+2. feat=new features, fix=bug fixes, etc.
+3. Scope: codebase section, in ().
+4. After type/scope: concise desc, colon+space.
+5. Longer body: blank line after desc.
 
-- Commits must start with a type, which is a noun like feat, fix, chore, et., followed by an optional scope, an optional ! for breaking changes, and a required terminal colon and space
-- Use feat for new features and fix for bug fixes
-- You may provide a scope after a type. The scope should be a noun describing a section of the codebase, surrounded by parentheses
-- After the type/scope prefix, include a short description of the code changes. This description should be followed immediately by a colon and a space
-- You may provide a longer commit body after the short description. Body should start one blank line after the description and can consist of any number of newline-separated paragraphs
+Multi-changes: 1 msg, concise. 📝Include all crucial changes. ⚠️ ONLY headline & body in output. No extra notes/comments/content.
 
-Example
-feat: add a new feature
+```example
+feat: add new feature
 
-This body describes the feature in more detail"),
+feature detail
+```"),
         }
     }
 }
