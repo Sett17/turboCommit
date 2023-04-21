@@ -111,7 +111,7 @@ pub fn choose_message(choices: Vec<String>) -> String {
         return choices[0].clone();
     }
     let max_index = choices.len();
-    let commit_index = inquire::CustomType::<usize>::new(&format!(
+    let commit_index = match inquire::CustomType::<usize>::new(&format!(
         "Which commit message do you want to use? {}",
         "<ESC> to cancel".bright_black()
     ))
@@ -122,8 +122,12 @@ pub fn choose_message(choices: Vec<String>) -> String {
             Ok(inquire::validator::Validation::Valid)
         }
     })
-    .prompt()
-    .unwrap();
+    .prompt() {
+        Ok(index) => index,
+        Err(_) => {
+            process::exit(0);
+        }
+    };
     choices[commit_index].clone()
 }
 
