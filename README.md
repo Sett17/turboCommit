@@ -18,6 +18,10 @@ Please note that in order to use turbocommit, you will need to set the `OPENAI_A
 
 ## Usage
 
+When you have staged some changes, you can run the `turbocommit` (I recommend making a `tc` symlink)
+
+![](example.gif)
+
 ### Generating Conventional Commits with `turbocommit`
 
 <!-- START TABLE HERE -->
