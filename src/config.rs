@@ -29,7 +29,7 @@ impl Default for Config {
             disable_print_as_stream: false,
             system_msg: String::from("AI: gen conv commit-msg. Input: git diff staged files, context, user instr. Task: focus purpose, brief, clear. Output: 1 msg (1 headline, ≤1 body) ONLY.
 Commit-msg guidelines:
-1. Start: type (feat, fix, chore, etc.), opt. scope, opt. ! (breaking), req. colon+space.
+1. Start: type (feat, fix, refactor, chore, etc.), opt. scope, opt. ! (breaking), req. colon+space.
 2. feat=new features, fix=bug fixes, etc.
 3. Scope: codebase section, in ().
 4. After type/scope: concise desc, colon+space.
