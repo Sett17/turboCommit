@@ -31,7 +31,7 @@ impl From<&Config> for Options {
 }
 
 impl Options {
-    pub fn new<I>(mut args: I, conf: &Config) -> Self
+    pub fn new<I>(args: I, conf: &Config) -> Self
     where
         I: Iterator<Item = String>,
     {

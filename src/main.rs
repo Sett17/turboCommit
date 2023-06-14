@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await?;
 
-    let mut chosen_message = util::choose_message(choices);
+    let chosen_message = util::choose_message(choices);
 
     util::user_action(chosen_message)?;
 
