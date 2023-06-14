@@ -279,6 +279,7 @@ pub fn count_token(s: &str) -> anyhow::Result<usize> {
 pub enum Model {
     #[default]
     Gpt35Turbo,
+    Gpt35Turbo16k,
     Gpt4,
     Gpt432k,
 }
@@ -289,6 +290,7 @@ impl FromStr for Model {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "gpt-3.5-turbo" => Ok(Self::Gpt35Turbo),
+            "gpt-3.5-turbo-16k" => Ok(Self::Gpt35Turbo16k),
             "gpt-4" => Ok(Self::Gpt4),
             "gpt-4-32k" => Ok(Self::Gpt432k),
             _ => Err(format!("{} is not a valid model", s)),
@@ -300,6 +302,7 @@ impl ToString for Model {
     fn to_string(&self) -> String {
         match self {
             Self::Gpt35Turbo { .. } => String::from("gpt-3.5-turbo"),
+            Self::Gpt35Turbo16k { .. } => String::from("gpt-3.5-turbo-16k"),
             Self::Gpt4 { .. } => String::from("gpt-4"),
             Self::Gpt432k { .. } => String::from("gpt-4-32k"),
         }
@@ -328,7 +331,8 @@ impl<'de> Deserialize<'de> for Model {
 impl Model {
     pub fn cost(&self, prompt_tokens: usize, completion_tokens: usize) -> f64 {
         let (prompt_cost, completion_cost) = match self {
-            Self::Gpt35Turbo => (0.002, 0.002),
+            Self::Gpt35Turbo => (0.0015, 0.002),
+            Self::Gpt35Turbo16k => (0.003, 0.004),
             Self::Gpt4 => (0.03, 0.06),
             Self::Gpt432k => (0.06, 0.12),
         };
@@ -340,6 +344,7 @@ impl Model {
     pub const fn context_size(&self) -> usize {
         match self {
             Self::Gpt35Turbo => 4096,
+            Self::Gpt35Turbo16k => 16384,
             Self::Gpt4 => 8192,
             Self::Gpt432k => 32768,
         }
