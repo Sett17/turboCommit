@@ -401,10 +401,12 @@ mod tests {
     #[test]
     fn test_model_from_str_and_to_string() {
         let gpt35_turbo = Model::from_str("gpt-3.5-turbo").unwrap();
+        let gpt35_turbo16k = Model::from_str("gpt-3.5-turbo-16k").unwrap();
         let gpt4 = Model::from_str("gpt-4").unwrap();
         let gpt432k = Model::from_str("gpt-4-32k").unwrap();
 
         assert_eq!(gpt35_turbo.to_string(), "gpt-3.5-turbo");
+        assert_eq!(gpt35_turbo16k.to_string(), "gpt-3.5-turbo-16k");
         assert_eq!(gpt4.to_string(), "gpt-4");
         assert_eq!(gpt432k.to_string(), "gpt-4-32k");
     }
@@ -412,10 +414,12 @@ mod tests {
     #[test]
     fn test_model_cost() {
         let gpt35_turbo = Model::Gpt35Turbo;
+        let gpt35_turbo16k = Model::Gpt35Turbo16k;
         let gpt4 = Model::Gpt4;
         let gpt432k = Model::Gpt432k;
 
-        assert_eq!(gpt35_turbo.cost(1000, 1000), 0.004);
+        assert_eq!(gpt35_turbo.cost(1000, 1000), 0.0035);
+        assert_eq!(gpt35_turbo16k.cost(1000, 1000), 0.007);
         assert_eq!(gpt4.cost(1000, 1000), 0.09);
         assert_eq!(gpt432k.cost(1000, 1000), 0.18);
     }
@@ -423,10 +427,12 @@ mod tests {
     #[test]
     fn test_model_context_size() {
         let gpt35_turbo = Model::Gpt35Turbo;
+        let gpt35_turbo16k = Model::Gpt35Turbo16k;
         let gpt4 = Model::Gpt4;
         let gpt432k = Model::Gpt432k;
 
         assert_eq!(gpt35_turbo.context_size(), 4096);
+        assert_eq!(gpt35_turbo16k.context_size(), 16384);
         assert_eq!(gpt4.context_size(), 8192);
         assert_eq!(gpt432k.context_size(), 32768);
     }
