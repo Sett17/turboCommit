@@ -35,6 +35,16 @@ When you have staged some changes, you can run the `turbocommit` (I recommend ma
 | -f    |              | Frequency penalty (f \|-2.0 < f < 2.0\|)    |      0.0      |
 <!-- END TABLE HERE -->
 
+### Available Models
+
+| Name                | Context Window | Cost Input | Cost Output |
+| ------------------- | -------------- | ---------- | ----------- |
+| `gpt-3.5-turbo`     | `4096`         | 0.0015     | 0.002       |
+| `gpt-3.5-turbo-16k` | `16384`        | 0.003      | 0.004       |
+| `gpt-4`             | `8192`         | 0.03       | 0.06        |
+| `gpt-4-32k`         | `32768`        | 0.06       | 0.12        |
+
+
 ### Handling Long `git diff`
 
 In some cases, the `git diff` for staged changes may be too long to fit within the 4096-token limit enforced by the language model, which `turbocommit` uses to generate commit messages. When this happens, `turbocommit` will prompt you with a message indicating that the `git diff` is too long.
