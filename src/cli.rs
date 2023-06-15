@@ -132,7 +132,7 @@ impl Options {
             }
         }
         if !msg.is_empty() {
-            opts.msg = format!("User Explanation/Instruction: '{}'", msg);
+            opts.msg = format!("User Explanation/Instruction: '{}'", msg.trim());
         }
         opts
     }
@@ -188,7 +188,6 @@ fn help() {
 mod tests {
     use super::*;
     use crate::config::Config;
-    use std::env;
 
     #[test]
     fn test_options_from_config() {
@@ -223,6 +222,7 @@ mod tests {
         ];
         let args = args.into_iter().map(String::from).collect::<Vec<String>>();
         let options = Options::new(args.into_iter(), &config);
+        println!("{:#?}", options);
 
         assert_eq!(options.n, 3);
         assert_eq!(options.t, 1.0);
@@ -230,6 +230,6 @@ mod tests {
         assert_eq!(options.print_once, true);
         assert_eq!(options.model, openai::Model::Gpt4);
         assert_eq!(options.dry_run, true);
-        assert_eq!(options.msg, "test commit");
+        assert_eq!(options.msg, "User Explanation/Instruction: 'test commit'");
     }
 }
