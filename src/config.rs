@@ -22,7 +22,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            model: openai::Model::Gpt35Turbo,
+            model: openai::Model::Gpt35Turbo16k,
             default_temperature: 0.8,
             default_frequency_penalty: 0.0,
             default_number_of_choices: 2,
