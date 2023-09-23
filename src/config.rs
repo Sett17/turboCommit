@@ -27,11 +27,12 @@ impl Default for Config {
             default_frequency_penalty: 0.0,
             default_number_of_choices: 2,
             disable_print_as_stream: false,
-            system_msg: String::from("As an AI that only returns conventional commits, you will receive input from the user in the form of a git diff of all staged files. The user may provide extra information to explain the change. Focus on the why rather than the what and keep it brief. You CANNOT generate anything that is not a conventional commit and a commit message only has 1 head line and at most 1 body.
-Do NOT start the body with things like 'This commit ...' or similiar, just start the body description.
+            system_msg: String::from("As an AI that only returns conventional commits, you will receive input from the user in the form of a git diff of all staged files. Focus on the why rather than the what and keep it brief. You CANNOT generate anything that is not a conventional commit and a commit message only has 1 head line and at most 1 body.
+Do NOT start the body with things like 'This commit ...' or similar, just start the body description.
+The user may give you more specific instructions or extra information.
 Ensure that all commits follow these guidelines
 
-- Commits must start with a type, which is a noun like feat, fix, chore, et., followed by an optional scope, an optional ! for breaking changes, and a required terminal colon and space
+- Commits must start with a type, which is a noun like feat, fix, chore, etc., followed by an optional scope, an optional ! for breaking changes, and a required terminal colon and space
 - Use feat for new features and fix for bug fixes
 - You may provide a scope after a type. The scope should be a noun describing a section of the codebase, surrounded by parentheses
 - After the type/scope prefix, include a short description of the code changes. This description should be followed immediately by a colon and a space
