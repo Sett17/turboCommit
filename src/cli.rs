@@ -5,7 +5,7 @@ use colored::Colorize;
 use std::str::FromStr;
 use std::{cmp, env, process};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Options {
     pub n: i32,
     pub msg: String,
@@ -13,7 +13,6 @@ pub struct Options {
     pub f: f64,
     pub print_once: bool,
     pub model: openai::Model,
-    pub dry_run: bool,
 }
 
 impl From<&Config> for Options {
@@ -25,7 +24,6 @@ impl From<&Config> for Options {
             f: config.default_frequency_penalty,
             print_once: config.disable_print_as_stream,
             model: config.model,
-            dry_run: false,
         }
     }
 }
@@ -104,13 +102,6 @@ impl Options {
                         };
                     }
                 }
-                "-d" | "--dry-run" => {
-                    opts.dry_run = true;
-                    println!(
-                        "{}",
-                        "Dry run. Will not ask AI for completions".bright_black()
-                    );
-                }
                 "-h" | "--help" => help(),
                 "-v" | "--version" => {
                     println!("turbocommit version {}", env!("CARGO_PKG_VERSION").purple());
@@ -157,7 +148,6 @@ fn help() {
     println!("Options:");
     println!("  -n <n>   Number of choices to generate\n",);
     println!("  -m <m>   Model to use\n  --model <m>\n",);
-    println!("  -d       Dry run. Will not ask AI for completions\n  --dry-run\n",);
     println!("  -p       Will not print tokens as they are generated.\n  --print-once \n",);
     println!(
         "  -t <t>   Temperature (|t| 0.0 < t < 2.0)\n{}\n",
@@ -199,7 +189,6 @@ mod tests {
         assert_eq!(options.f, config.default_frequency_penalty);
         assert_eq!(options.print_once, config.disable_print_as_stream);
         assert_eq!(options.model, config.model);
-        assert_eq!(options.dry_run, false);
     }
 
     #[test]
@@ -216,7 +205,6 @@ mod tests {
             "--print-once",
             "--model",
             "gpt-4",
-            "--dry-run",
             "test",
             "commit",
         ];
@@ -229,7 +217,6 @@ mod tests {
         assert_eq!(options.f, 0.5);
         assert_eq!(options.print_once, true);
         assert_eq!(options.model, openai::Model::Gpt4);
-        assert_eq!(options.dry_run, true);
         assert_eq!(options.msg, "User Explanation/Instruction: 'test commit'");
     }
 }

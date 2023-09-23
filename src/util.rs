@@ -1,8 +1,7 @@
 use std::{process, time::Duration};
 
 use colored::Colorize;
-use crossterm::{execute, style::Print};
-use inquire::{Confirm, MultiSelect, Select};
+use inquire::MultiSelect;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{git, openai};
@@ -122,57 +121,12 @@ pub fn choose_message(choices: Vec<String>) -> String {
             Ok(inquire::validator::Validation::Valid)
         }
     })
-    .prompt() {
+    .prompt()
+    {
         Ok(index) => index,
         Err(_) => {
             process::exit(0);
         }
     };
     choices[commit_index].clone()
-}
-
-pub fn user_action(msg: String) -> anyhow::Result<()> {
-    let tasks = vec!["Commit it", "Edit it & Commit", "Abort"];
-
-    let task = Select::new("What to do with the message?", tasks).prompt()?;
-
-    match task {
-        "Commit it" => {
-            match git::commit(msg) {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("{e}");
-                    process::exit(1);
-                }
-            };
-            println!("{} 🎉", "Commit successful!".purple());
-        }
-        "Edit it & Commit" => {
-            let edited = edit::edit(msg)?;
-            execute!(
-                std::io::stdout(),
-                Print(format!(
-                    "{}\n",
-                    format!("[{}]=======", "Edited Message".purple()).bright_black()
-                )),
-                Print(&edited),
-                Print(format!("{}\n", "=======================".bright_black())),
-            )?;
-            let do_commit = Confirm::new("Do you want to commit with this message? ")
-                .with_default(true)
-                .prompt()?;
-            if do_commit {
-                match git::commit(edited) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("{e}");
-                        process::exit(1);
-                    }
-                };
-                println!("{} 🎉", "Commit successful!".purple());
-            }
-        }
-        _ => {}
-    };
-    Ok(())
 }
