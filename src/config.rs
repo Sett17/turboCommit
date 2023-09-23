@@ -3,7 +3,7 @@ use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::process;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     #[serde(default)]
     pub model: openai::Model,
@@ -29,7 +29,8 @@ impl Default for Config {
             disable_print_as_stream: false,
             system_msg: String::from("As an AI that only returns conventional commits, you will receive input from the user in the form of a git diff of all staged files. Focus on the why rather than the what and keep it brief. You CANNOT generate anything that is not a conventional commit and a commit message only has 1 head line and at most 1 body.
 Do NOT start the body with things like 'This commit ...' or similar, just start the body description.
-The user may give you more specific instructions or extra information.
+Make sure the body reads as a single message, NOT a list of bullets or multiple commits.
+The user may give you more specific instructions or extra information. The user may ask for revisions.
 Ensure that all commits follow these guidelines
 
 - Commits must start with a type, which is a noun like feat, fix, chore, etc., followed by an optional scope, an optional ! for breaking changes, and a required terminal colon and space
