@@ -48,10 +48,6 @@ pub async fn start<W: Write + Send + 'static>(
     })
 }
 
-pub fn abort(loading_animation: tokio::task::JoinHandle<()>) {
-    loading_animation.abort();
-}
-
 #[cfg(test)]
 mod tests {
 
@@ -69,7 +65,7 @@ mod tests {
         };
         let animation = start(msg, false, writer).await;
         tokio::time::sleep(Duration::from_millis(120)).await;
-        abort(animation);
+        animation.abort();
 
         // Lock the Mutex, read the buffer's contents, and then unlock the Mutex
         let locked_buffer = buffer.lock().unwrap();
