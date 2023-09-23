@@ -1,3 +1,4 @@
+use actor::Actor;
 use colored::Colorize;
 use config::Config;
 
@@ -5,6 +6,7 @@ use openai::Message;
 
 use std::{env, process};
 
+mod actor;
 mod animation;
 mod cli;
 mod config;
@@ -13,7 +15,7 @@ mod openai;
 mod util;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     let config = Config::load();
     match config.save() {
         Ok(_) => (),
@@ -29,6 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         process::exit(1);
     };
 
+    let mut actor = Actor::new(options.clone(), api_key);
+
     let repo = git::get_repo()?;
 
     let system_len = openai::count_token(&config.system_msg).unwrap_or(0);
@@ -37,43 +41,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (diff, diff_tokens) =
         util::decide_diff(&repo, system_len + extra_len, options.model.context_size())?;
 
-    if options.dry_run {
-        println!("This will use ~{} prompt tokens, costing you ~${}.\nEach 1K completion tokens will cost you ~${}",
-            format!("{}", system_len + extra_len + diff_tokens).purple(),
-            format!("{:0.5}", options.model.cost(system_len + extra_len + diff_tokens, 0)).purple(),
-            format!("{:0.5}", options.model.cost(0, 1000)).purple());
-        util::check_version().await;
-        process::exit(0);
-    }
-
-    let prompt_tokens = system_len + extra_len + diff_tokens;
-
-    let mut messages = vec![Message::system(config.system_msg), Message::user(diff)];
+    actor.add_message(Message::system(config.system_msg));
+    actor.add_message(Message::user(diff));
 
     if !options.msg.is_empty() {
-        messages.push(Message::user(options.msg));
+        actor.add_message(Message::user(options.msg));
     }
 
-    let choices = openai::Request::new(
-        options.model.clone().to_string(),
-        messages,
-        options.n,
-        options.t,
-        options.f,
-    )
-    .execute(
-        api_key,
-        options.print_once,
-        options.model.clone(),
-        prompt_tokens,
-    )
-    .await?;
+    actor.used_tokens = system_len + extra_len + diff_tokens;
 
-    let chosen_message = util::choose_message(choices);
-
-    util::user_action(chosen_message)?;
+    let result = actor.start().await;
 
     util::check_version().await;
 
-    Ok(())
+    result
+
 }
