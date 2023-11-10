@@ -2,7 +2,7 @@ use git2::{Repository, Tree};
 use std::process::Command;
 
 pub fn get_repo() -> Result<Repository, git2::Error> {
-    Repository::open(".")
+    Repository::discover(".")
 }
 
 pub fn staged_files(repo: &Repository) -> Result<Vec<String>, git2::Error> {
