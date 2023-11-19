@@ -1,0 +1,44 @@
+name: Code Generation Workflow
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'  # Runs at 00:00 on the first day of every month
+
+jobs:
+  generate-and-create-pr:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install Python dependencies
+      run: |
+        pip install -r code-gen/requirements.txt
+        pip install toml
+
+    - name: Run code generation script
+      run: |
+        python code-gen/gen.py
+
+    - name: Extract Version from Cargo.toml
+      run: |
+        version=$(python -c "import toml; print(toml.load('Cargo.toml')['package']['version'])")
+        echo "Extracted version: $version"
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        title: "Automated Model Update"
+        commit-message: "Automated update of model definitions"
+        branch: "update-models-${{ steps.extract_version.outputs.version }}"
+        body: |
+          This is an automated pull request to update the model definitions.
+          
+          **Before merging:**
+          - [ ] Ensure to create a new tag with the version ${{ steps.extract_version.outputs.version }} after merging.
+        signoff: true
