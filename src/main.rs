@@ -12,6 +12,7 @@ mod cli;
 mod config;
 mod git;
 mod openai;
+mod model;
 mod util;
 
 #[tokio::main]

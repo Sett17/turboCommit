@@ -1,4 +1,4 @@
-use crate::openai;
+use crate::{model};
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::process;
@@ -6,7 +6,7 @@ use std::process;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     #[serde(default)]
-    pub model: openai::Model,
+    pub model: model::Model,
     #[serde(default)]
     pub default_temperature: f64,
     #[serde(default)]
@@ -22,7 +22,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            model: openai::Model::Gpt35Turbo,
+            model: model::Model::Gpt35Turbo,
             default_temperature: 0.8,
             default_frequency_penalty: 0.0,
             default_number_of_choices: 2,
