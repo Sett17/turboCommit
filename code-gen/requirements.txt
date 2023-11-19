@@ -1,0 +1,7 @@
+toml
+requests
+pyyaml
+fuzzywuzzy
+beautifulsoup4
+selenium
+webdriver_manager
