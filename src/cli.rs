@@ -1,6 +1,6 @@
 use crate::config::Config;
-use crate::openai;
 use crate::openai::count_token;
+use crate::model;
 use colored::Colorize;
 use std::str::FromStr;
 use std::{cmp, env, process};
@@ -12,7 +12,7 @@ pub struct Options {
     pub t: f64,
     pub f: f64,
     pub print_once: bool,
-    pub model: openai::Model,
+    pub model: model::Model,
 }
 
 impl From<&Config> for Options {
@@ -89,7 +89,7 @@ impl Options {
                 }
                 "-m" | "--model" => {
                     if let Some(model) = iter.next() {
-                        opts.model = match openai::Model::from_str(&model) {
+                        opts.model = match model::Model::from_str(&model) {
                             Ok(model) => model,
                             Err(err) => {
                                 println!(
@@ -147,7 +147,12 @@ fn help() {
     println!("\nUsage: turbocommit [options] [message]\n");
     println!("Options:");
     println!("  -n <n>   Number of choices to generate\n",);
-    println!("  -m <m>   Model to use\n  --model <m>\n",);
+    println!("  -m <m>   Model to use\n  --model <m>",);
+    println!("    Available models:");
+    model::Model::all().iter().for_each(|model| {
+        println!("     {}", model.to_string().bright_black());
+    });
+    println!();
     println!("  -p       Will not print tokens as they are generated.\n  --print-once \n",);
     println!(
         "  -t <t>   Temperature (|t| 0.0 < t < 2.0)\n{}\n",
@@ -216,7 +221,7 @@ mod tests {
         assert_eq!(options.t, 1.0);
         assert_eq!(options.f, 0.5);
         assert_eq!(options.print_once, true);
-        assert_eq!(options.model, openai::Model::Gpt4);
+        assert_eq!(options.model, model::Model::Gpt4);
         assert_eq!(options.msg, "User Explanation/Instruction: 'test commit'");
     }
 }
