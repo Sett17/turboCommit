@@ -1,3 +1,4 @@
+jinja2
 toml
 requests
 pyyaml
