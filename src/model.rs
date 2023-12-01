@@ -9,10 +9,10 @@ pub enum Model {
     Gpt40613,
     Gpt432k,
     Gpt432k0613,
-    Gpt35Turbo1106,
     #[default]
     Gpt35Turbo,
     Gpt35Turbo16k,
+    Gpt35Turbo1106,
 }
 
 impl FromStr for Model {
@@ -26,9 +26,9 @@ impl FromStr for Model {
             "gpt-4-0613" => Ok(Self::Gpt40613),
             "gpt-4-32k" => Ok(Self::Gpt432k),
             "gpt-4-32k-0613" => Ok(Self::Gpt432k0613),
-            "gpt-3.5-turbo-1106" => Ok(Self::Gpt35Turbo1106),
             "gpt-3.5-turbo" => Ok(Self::Gpt35Turbo),
             "gpt-3.5-turbo-16k" => Ok(Self::Gpt35Turbo16k),
+            "gpt-3.5-turbo-1106" => Ok(Self::Gpt35Turbo1106),
             _ => Err(format!("{} is not a valid model", s)),
         }
     }
@@ -44,9 +44,9 @@ impl ToString for Model {
             Self::Gpt40613 { .. } => String::from("gpt-4-0613"),
             Self::Gpt432k { .. } => String::from("gpt-4-32k"),
             Self::Gpt432k0613 { .. } => String::from("gpt-4-32k-0613"),
-            Self::Gpt35Turbo1106 { .. } => String::from("gpt-3.5-turbo-1106"),
             Self::Gpt35Turbo { .. } => String::from("gpt-3.5-turbo"),
             Self::Gpt35Turbo16k { .. } => String::from("gpt-3.5-turbo-16k"),
+            Self::Gpt35Turbo1106 { .. } => String::from("gpt-3.5-turbo-1106"),
         }
     }
 }
@@ -79,9 +79,9 @@ impl Model {
             Self::Gpt40613,
             Self::Gpt432k,
             Self::Gpt432k0613,
-            Self::Gpt35Turbo1106,
             Self::Gpt35Turbo,
             Self::Gpt35Turbo16k,
+            Self::Gpt35Turbo1106,
         ]
     }
 
@@ -93,9 +93,9 @@ impl Model {
             Self::Gpt40613 => (0.01, 0.03),
             Self::Gpt432k => (0.06, 0.12),
             Self::Gpt432k0613 => (0.06, 0.12),
-            Self::Gpt35Turbo1106 => (0.001, 0.002),
             Self::Gpt35Turbo => (0.0015, 0.002),
             Self::Gpt35Turbo16k => (0.0015, 0.002),
+            Self::Gpt35Turbo1106 => (0.001, 0.002),
         };
         (prompt_tokens as f64).mul_add(
             prompt_cost / 1000.0,
@@ -111,9 +111,9 @@ impl Model {
             Self::Gpt40613 => 8192,
             Self::Gpt432k => 32768,
             Self::Gpt432k0613 => 32768,
-            Self::Gpt35Turbo1106 => 16385,
             Self::Gpt35Turbo => 4096,
             Self::Gpt35Turbo16k => 16385,
+            Self::Gpt35Turbo1106 => 16385,
         }
     }
 }
