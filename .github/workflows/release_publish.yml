@@ -19,10 +19,10 @@ jobs:
         TAG=$(git tag --points-at HEAD)
         if [ -z "$TAG" ]; then
           echo "tag_exists=false" >> $GITHUB_ENV
-          echo "::set-output name=tag_exists::false"
+          echo "tag_exists=false" >> $GITHUB_OUTPUT
         else
           echo "tag_exists=true" >> $GITHUB_ENV
-          echo "::set-output name=tag_exists::true"
+          echo "tag_exists=true" >> $GITHUB_OUTPUT
         fi
       shell: bash
 
