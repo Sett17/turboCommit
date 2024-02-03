@@ -1,9 +1,7 @@
 name: Release & Publish Workflow
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   check-tag:
@@ -27,8 +25,8 @@ jobs:
       shell: bash
 
   build-and-release:
-    needs: check-tag
-    if: needs.check-tag.outputs.tag_exists == 'true'
+    # needs: check-tag
+    # if: needs.check-tag.outputs.tag_exists == 'true'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
