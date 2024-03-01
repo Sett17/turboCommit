@@ -14,9 +14,9 @@ pub enum Model {
     #[default]
     Gpt35Turbo,
     Gpt35Turbo16k,
-    Gpt35Turbo0301,
     Gpt35Turbo0613,
     Gpt35Turbo1106,
+    Gpt35Turbo0125,
     Gpt35Turbo16k0613,
 }
 
@@ -35,9 +35,9 @@ impl FromStr for Model {
             "gpt-4-32k-0613" => Ok(Self::Gpt432k0613),
             "gpt-3.5-turbo" => Ok(Self::Gpt35Turbo),
             "gpt-3.5-turbo-16k" => Ok(Self::Gpt35Turbo16k),
-            "gpt-3.5-turbo-0301" => Ok(Self::Gpt35Turbo0301),
             "gpt-3.5-turbo-0613" => Ok(Self::Gpt35Turbo0613),
             "gpt-3.5-turbo-1106" => Ok(Self::Gpt35Turbo1106),
+            "gpt-3.5-turbo-0125" => Ok(Self::Gpt35Turbo0125),
             "gpt-3.5-turbo-16k-0613" => Ok(Self::Gpt35Turbo16k0613),
             _ => Err(format!("{} is not a valid model", s)),
         }
@@ -58,9 +58,9 @@ impl ToString for Model {
             Self::Gpt432k0613 { .. } => String::from("gpt-4-32k-0613"),
             Self::Gpt35Turbo { .. } => String::from("gpt-3.5-turbo"),
             Self::Gpt35Turbo16k { .. } => String::from("gpt-3.5-turbo-16k"),
-            Self::Gpt35Turbo0301 { .. } => String::from("gpt-3.5-turbo-0301"),
             Self::Gpt35Turbo0613 { .. } => String::from("gpt-3.5-turbo-0613"),
             Self::Gpt35Turbo1106 { .. } => String::from("gpt-3.5-turbo-1106"),
+            Self::Gpt35Turbo0125 { .. } => String::from("gpt-3.5-turbo-0125"),
             Self::Gpt35Turbo16k0613 { .. } => String::from("gpt-3.5-turbo-16k-0613"),
         }
     }
@@ -98,29 +98,29 @@ impl Model {
             Self::Gpt432k0613,
             Self::Gpt35Turbo,
             Self::Gpt35Turbo16k,
-            Self::Gpt35Turbo0301,
             Self::Gpt35Turbo0613,
             Self::Gpt35Turbo1106,
+            Self::Gpt35Turbo0125,
             Self::Gpt35Turbo16k0613,
         ]
     }
 
     pub fn cost(&self, prompt_tokens: usize, completion_tokens: usize) -> f64 {
         let (prompt_cost, completion_cost) = match self {
-            Self::Gpt40125Preview => (0.01, 0.03),
-            Self::Gpt4TurboPreview => (0.01, 0.03),
-            Self::Gpt41106Preview => (0.01, 0.03),
-            Self::Gpt4VisionPreview => (0.01, 0.03),
-            Self::Gpt4 => (0.01, 0.03),
-            Self::Gpt40613 => (0.01, 0.03),
-            Self::Gpt432k => (0.06, 0.12),
-            Self::Gpt432k0613 => (0.06, 0.12),
-            Self::Gpt35Turbo => (0.0015, 0.002),
-            Self::Gpt35Turbo16k => (0.0015, 0.002),
-            Self::Gpt35Turbo0301 => (0.0015, 0.002),
-            Self::Gpt35Turbo0613 => (0.0015, 0.002),
-            Self::Gpt35Turbo1106 => (0.001, 0.002),
-            Self::Gpt35Turbo16k0613 => (0.0015, 0.002),
+            Self::Gpt40125Preview => (10.0, 30.0),
+            Self::Gpt4TurboPreview => (10.0, 30.0),
+            Self::Gpt41106Preview => (10.0, 30.0),
+            Self::Gpt4VisionPreview => (10.0, 30.0),
+            Self::Gpt4 => (10.0, 30.0),
+            Self::Gpt40613 => (10.0, 30.0),
+            Self::Gpt432k => (60.0, 120.0),
+            Self::Gpt432k0613 => (60.0, 120.0),
+            Self::Gpt35Turbo => (3.0, 4.0),
+            Self::Gpt35Turbo16k => (3.0, 4.0),
+            Self::Gpt35Turbo0613 => (1.5, 2.0),
+            Self::Gpt35Turbo1106 => (1.0, 2.0),
+            Self::Gpt35Turbo0125 => (0.5, 1.5),
+            Self::Gpt35Turbo16k0613 => (3.0, 4.0),
         };
         (prompt_tokens as f64).mul_add(
             prompt_cost / 1000.0,
@@ -140,9 +140,9 @@ impl Model {
             Self::Gpt432k0613 => 32768,
             Self::Gpt35Turbo => 4096,
             Self::Gpt35Turbo16k => 16385,
-            Self::Gpt35Turbo0301 => 4096,
             Self::Gpt35Turbo0613 => 4096,
             Self::Gpt35Turbo1106 => 16385,
+            Self::Gpt35Turbo0125 => 16385,
             Self::Gpt35Turbo16k0613 => 16385,
         }
     }
