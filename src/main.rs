@@ -4,21 +4,21 @@ use config::Config;
 
 use openai::Message;
 
-use std::{env, process};
+use std::{env, process, time::Duration};
 
 mod actor;
 mod animation;
 mod cli;
 mod config;
 mod git;
-mod openai;
 mod model;
+mod openai;
 mod util;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = Config::load();
-    match config.save() {
+    match config.save_if_changed() {
         Ok(_) => (),
         Err(err) => {
             println!("{}", format!("Unable to write to config: {err}").red());
@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
     let (diff, diff_tokens) =
         util::decide_diff(&repo, system_len + extra_len, options.model.context_size())?;
 
-    actor.add_message(Message::system(config.system_msg));
+    actor.add_message(Message::system(config.system_msg.clone()));
     actor.add_message(Message::user(diff));
 
     if !options.msg.is_empty() {
@@ -55,6 +55,16 @@ async fn main() -> anyhow::Result<()> {
 
     util::check_version().await;
 
-    result
+    if util::check_config_age(Duration::from_secs(60 * 60 * 24 * 30 * 6)) {
+        if !util::is_system_prompt_same_as_default(&config.system_msg) {
+            println!(
+                "\n{}\n{}\n{}",
+                "Your system prompt seems to be old.".yellow(),
+                "There is a new default recommended system prompt. To apply it, delete the `system_msg` field in your config file.".bright_black(),
+                "To get rid of this message, simply save your config file to change the last modified date.".bright_black()
+            );
+        }
+    }
 
+    result
 }

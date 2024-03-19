@@ -56,8 +56,15 @@ impl Config {
             |path| path.join(".turbocommit.yaml"),
         );
         match std::fs::read_to_string(path) {
-            Ok(config) => match serde_yaml::from_str(&config) {
-                Ok(config) => config,
+            Ok(config) => match serde_yaml::from_str::<Self>(&config) {
+                Ok(config) => { 
+                    if config.system_msg.trim().is_empty() {
+                        let mut config = config;
+                        config.system_msg = Self::default().system_msg;
+                        return config;
+                    }
+                    config
+                },
                 Err(err) => {
                     println!(
                         "{}\n{}",
@@ -84,7 +91,7 @@ impl Config {
             }
         }
     }
-    pub fn save(&self) -> Result<(), std::io::Error> {
+    pub fn save_if_changed(&self) -> Result<(), std::io::Error> {
         let path = home::home_dir().map_or_else(
             || {
                 println!("{}", "Unable to find home directory.".red());
@@ -102,6 +109,22 @@ impl Config {
                 ));
             }
         };
+
+        if let Ok(existing_config) = std::fs::read_to_string(&path) {
+            if existing_config == config {
+                return Ok(());
+            }
+        }
+
         std::fs::write(path, config)
+    }
+    pub fn path() -> std::path::PathBuf {
+        home::home_dir().map_or_else(
+            || {
+                println!("{}", "Unable to find home directory.".red());
+                process::exit(1);
+            },
+            |path| path.join(".turbocommit.yaml"),
+        )
     }
 }

@@ -1,10 +1,10 @@
-use std::{process, time::Duration};
+use std::time::Duration;
 
 use colored::Colorize;
 use inquire::MultiSelect;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{git, openai};
+use crate::{config::Config, git, openai};
 
 pub fn decide_diff(
     repo: &git2::Repository,
@@ -73,9 +73,30 @@ pub fn count_lines(text: &str, max_width: usize) -> u16 {
     line_count + 1
 }
 
+pub fn check_config_age(max_age: Duration) -> bool {
+    let path = Config::path();
+    let metadata = match std::fs::metadata(&path) {
+        Ok(metadata) => metadata,
+        Err(_) => {
+            return false;
+        }
+    };
+    let last_modified = metadata.modified().unwrap();
+    let now = std::time::SystemTime::now();
+    match now.duration_since(last_modified) {
+        Ok(duration) => duration > max_age,
+        Err(_) => false,
+    }
+}
+
+pub fn is_system_prompt_same_as_default(system_msg: &str) -> bool {
+    let default = Config::default().system_msg;
+    system_msg == default
+}
+
 pub async fn check_version() {
     let client = match crates_io_api::AsyncClient::new(
-        "turbocommit lateste version checker",
+        "turbocommit latest version checker",
         Duration::from_millis(1000),
     ) {
         Ok(client) => client,
@@ -105,9 +126,9 @@ pub async fn check_version() {
     }
 }
 
-pub fn choose_message(choices: Vec<String>) -> String {
+pub fn choose_message(choices: Vec<String>) -> Option<String> {
     if choices.len() == 1 {
-        return choices[0].clone();
+        return Some(choices[0].clone());
     }
     let max_index = choices.len();
     let commit_index = match inquire::CustomType::<usize>::new(&format!(
@@ -125,8 +146,8 @@ pub fn choose_message(choices: Vec<String>) -> String {
     {
         Ok(index) => index,
         Err(_) => {
-            process::exit(0);
+            return None;
         }
     };
-    choices[commit_index].clone()
+    Some(choices[commit_index].clone())
 }

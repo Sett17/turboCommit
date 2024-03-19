@@ -67,11 +67,9 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(120)).await;
         animation.abort();
 
-        // Lock the Mutex, read the buffer's contents, and then unlock the Mutex
         let locked_buffer = buffer.lock().unwrap();
         let output = String::from_utf8(locked_buffer.clone()).unwrap();
 
-        //https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
         let expected = "\u{1b}[2K\u{1b}[1G\u{1b}[38;5;11m\u{1b}[90mLoading\u{1b}[0m🕐\u{1b}[0m\u{1b}[2K\u{1b}[1G\u{1b}[38;5;11m\u{1b}[90mLoading\u{1b}[0m🕑\u{1b}[0m";
 
         assert_eq!(output, expected);

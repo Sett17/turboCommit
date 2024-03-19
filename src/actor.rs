@@ -48,7 +48,12 @@ impl Actor {
 
     pub async fn start(&mut self) -> anyhow::Result<()> {
         let first_choices = self.ask().await?;
-        let mut message = util::choose_message(first_choices);
+        let mut message = match util::choose_message(first_choices) {
+            Some(message) => message,
+            None => {
+                return Ok(());
+            }
+        };
         let tasks = vec![
             Task::Commit.to_str(),
             Task::Edit.to_str(),
@@ -90,7 +95,12 @@ impl Actor {
 
                     let choices = self.ask().await?;
 
-                    message = util::choose_message(choices);
+                    message = match util::choose_message(choices) {
+                        Some(message) => message,
+                        None => {
+                            return Ok(());
+                        }
+                    };
                 }
                 Task::Abort => {
                     break;
