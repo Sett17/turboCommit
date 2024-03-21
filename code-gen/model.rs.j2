@@ -70,8 +70,8 @@ impl Model {
             {% endfor %}
         };
         (prompt_tokens as f64).mul_add(
-            prompt_cost / 1000.0,
-            (completion_tokens as f64) * (completion_cost / 1000.0),
+            prompt_cost / 1000000.0,
+            (completion_tokens as f64) * (completion_cost / 1000000.0),
         )
     }
 
