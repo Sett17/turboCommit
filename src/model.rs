@@ -18,6 +18,10 @@ pub enum Model {
     Gpt35Turbo1106,
     Gpt35Turbo0125,
     Gpt35Turbo16k0613,
+    Gpt4o,
+    Gpt4o20240513,
+    Gpt4Turbo20240409,
+    Gpt35TurboInstruct,
 }
 
 impl FromStr for Model {
@@ -39,6 +43,10 @@ impl FromStr for Model {
             "gpt-3.5-turbo-1106" => Ok(Self::Gpt35Turbo1106),
             "gpt-3.5-turbo-0125" => Ok(Self::Gpt35Turbo0125),
             "gpt-3.5-turbo-16k-0613" => Ok(Self::Gpt35Turbo16k0613),
+            "gpt-4o" => Ok(Self::Gpt4o),
+            "gpt-4o-2024-05-13" => Ok(Self::Gpt4o20240513),
+            "gpt-4-turbo-2024-04-09" => Ok(Self::Gpt4Turbo20240409),
+            "gpt-3.5-turbo-instruct" => Ok(Self::Gpt35TurboInstruct),
             _ => Err(format!("{} is not a valid model", s)),
         }
     }
@@ -62,6 +70,10 @@ impl ToString for Model {
             Self::Gpt35Turbo1106 { .. } => String::from("gpt-3.5-turbo-1106"),
             Self::Gpt35Turbo0125 { .. } => String::from("gpt-3.5-turbo-0125"),
             Self::Gpt35Turbo16k0613 { .. } => String::from("gpt-3.5-turbo-16k-0613"),
+            Self::Gpt4o { .. } => String::from("gpt-4o"),
+            Self::Gpt4o20240513 { .. } => String::from("gpt-4o-2024-05-13"),
+            Self::Gpt4Turbo20240409 { .. } => String::from("gpt-4-turbo-2024-04-09"),
+            Self::Gpt35TurboInstruct { .. } => String::from("gpt-3.5-turbo-instruct"),
         }
     }
 }
@@ -102,6 +114,10 @@ impl Model {
             Self::Gpt35Turbo1106,
             Self::Gpt35Turbo0125,
             Self::Gpt35Turbo16k0613,
+            Self::Gpt4o,
+            Self::Gpt4o20240513,
+            Self::Gpt4Turbo20240409,
+            Self::Gpt35TurboInstruct,
         ]
     }
 
@@ -120,7 +136,10 @@ impl Model {
             Self::Gpt35Turbo0613 => (1.5, 2.0),
             Self::Gpt35Turbo1106 => (1.0, 2.0),
             Self::Gpt35Turbo0125 => (0.5, 1.5),
-            Self::Gpt35Turbo16k0613 => (3.0, 4.0),
+            Self::Gpt4o => (5.0, 15.0),
+            Self::Gpt4o20240513 => (5.0, 15.0),
+            Self::Gpt4Turbo20240409 => (10.0, 30.0),
+            Self::Gpt35TurboInstruct => (1.5, 2.0),   Self::Gpt35Turbo16k0613 => (3.0, 4.0),
         };
         (prompt_tokens as f64).mul_add(
             prompt_cost / 1000000.0,
@@ -144,6 +163,10 @@ impl Model {
             Self::Gpt35Turbo1106 => 16385,
             Self::Gpt35Turbo0125 => 16385,
             Self::Gpt35Turbo16k0613 => 16385,
+            Self::Gpt4o => 128000,
+            Self::Gpt4o20240513 => 128000,
+            Self::Gpt4Turbo20240409 => 128000,
+            Self::Gpt35TurboInstruct => 4096,
         }
     }
 }
